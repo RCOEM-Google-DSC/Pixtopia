@@ -1,0 +1,10 @@
+teamName,email,hackeRankUrl,year,phoneNo,branch,isLeader
+Alpha Squad,alpha.leader@example.com,https://hackerrank.com/alphalead,3,1234567890,CSE,true
+Alpha Squad,alpha.member1@example.com,https://hackerrank.com/alpham1,3,1234567891,CSE,false
+Alpha Squad,alpha.member2@example.com,https://hackerrank.com/alpham2,2,1234567892,IT,false
+Beta Force,beta.leader@example.com,https://hackerrank.com/betalead,4,9876543210,ECE,true
+Beta Force,beta.member1@example.com,https://hackerrank.com/betam1,4,9876543211,ECE,false
+Gamma Rays,gamma.leader@example.com,https://hackerrank.com/gammalead,1,5555555555,MECH,true
+Gamma Rays,gamma.member1@example.com,https://hackerrank.com/gammam1,1,5555555556,CIVIL,false
+Gamma Rays,gamma.member2@example.com,https://hackerrank.com/gammam2,2,5555555557,CS,false
+Gamma Rays,gamma.member3@example.com,https://hackerrank.com/gammam3,2,5555555558,IT,false
