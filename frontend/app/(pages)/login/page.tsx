@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -16,14 +16,12 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // On success, you can route to a dashboard or home
-      router.push("/dashboard"); 
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to login. Please check your credentials.");
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to login.";
+      setError(msg.includes("invalid") ? "Invalid email or password." : msg);
     } finally {
       setLoading(false);
     }
@@ -31,7 +29,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative overflow-hidden">
-      {/* Background gradients */}
+      {/* Background glows */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500/20 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-500/20 rounded-full blur-[100px]" />
 
@@ -40,7 +38,7 @@ export default function LoginPage() {
           <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-2">
             Pixtopia
           </h1>
-          <p className="text-zinc-400">Sign in to your team account</p>
+          <p className="text-zinc-400">Sign in with your team leader account</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -49,12 +47,11 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-          
+
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">
-              Leader Email
-            </label>
+            <label className="text-sm font-medium text-zinc-300">Leader Email</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -65,10 +62,9 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300">
-              Team Password
-            </label>
+            <label className="text-sm font-medium text-zinc-300">Team Password</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -80,10 +76,11 @@ export default function LoginPage() {
 
           <button
             type="submit"
+            id="login-btn"
             disabled={loading}
-            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-semibold transition-all transform active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
       </div>
