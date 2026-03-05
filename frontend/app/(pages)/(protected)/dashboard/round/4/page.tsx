@@ -6,7 +6,7 @@ import { useTeam } from "@/lib/useTeam";
 import {
   getRoundQuestions, submitRound, subscribeToGameState,
   Question,
-} from "@/lib/firestore";
+} from "@/lib/database";
 import { Clock, CheckCircle, Delete, Lock } from "lucide-react";
 import Image from "next/image";
 
@@ -38,7 +38,7 @@ export default function Round4Page() {
 
   useEffect(() => {
     const unsub = subscribeToGameState((gs) => {
-      setRoundStatus(gs?.roundStatuses?.["4"]?.status ?? "locked");
+      setRoundStatus(gs?.round_statuses?.["4"]?.status ?? "locked");
     });
     return () => unsub();
   }, []);
@@ -120,7 +120,7 @@ export default function Round4Page() {
         const ans = newAnswers[qItem.id] ?? "";
         if (ans.toLowerCase() === (qItem.answer ?? "").toLowerCase()) calc += qItem.points;
       });
-      await submitRound(team.teamId, "4", newAnswers, calc);
+      await submitRound(team.id, "4", newAnswers, calc);
       setScore(calc);
       setSubmitted(true);
     }
@@ -177,7 +177,7 @@ export default function Round4Page() {
 
         {/* 4 images grid */}
         <div className="grid grid-cols-2 gap-3 w-full">
-          {(q.imageUrls ?? []).map((url, idx) => (
+          {(q.image_urls ?? []).map((url, idx) => (
             <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-zinc-800">
               <Image
                 src={url}

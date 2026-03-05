@@ -7,7 +7,7 @@ import { useTeam } from "@/lib/useTeam";
 import {
   getRoundQuestions, scoreQuestion, submitRound1Final, subscribeToGameState,
   Question, GameState,
-} from "@/lib/firestore";
+} from "@/lib/database";
 import { Clock, CheckCircle, AlertCircle, Lock } from "lucide-react";
 
 const PER_Q_SECONDS = 120;
@@ -44,10 +44,10 @@ function shuffleForUser(questions: Question[], uid: string): Question[] {
   return shuffledQs.map((q) => {
     if (!q.options || q.options.length === 0) return q;
     const optSeed = strToSeed(uid + q.id);
-    const originalCorrectAnswer = q.options[q.correctIndex];
+    const originalCorrectAnswer = q.options[q.correct_index];
     const shuffledOptions = seededShuffle(q.options, optSeed);
     const newCorrectIndex = shuffledOptions.indexOf(originalCorrectAnswer);
-    return { ...q, options: shuffledOptions, correctIndex: newCorrectIndex };
+    return { ...q, options: shuffledOptions, correct_index: newCorrectIndex };
   });
 }
 
@@ -96,12 +96,12 @@ export default function Round1Page() {
 
   // ── Load + shuffle questions (seed = user UID for unique consistent order) ──
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
     getRoundQuestions("1").then((qs) => {
-      setQuestions(shuffleForUser(qs, user.uid));
+      setQuestions(shuffleForUser(qs, user.id));
       setLoading(false);
     });
-  }, [user?.uid]);
+  }, [user?.id]);
 
   // ── Subscribe to gameState ──
   useEffect(() => {
@@ -136,11 +136,11 @@ export default function Round1Page() {
     // Calculate total score from all answers
     let calc = 0;
     questions.forEach((q) => {
-      if (finalAnswers[q.id] === q.correctIndex) calc += q.points;
+      if (finalAnswers[q.id] === q.correct_index) calc += q.points;
     });
 
     // Save metadata only — points already incremented per-question via scoreQuestion
-    await submitRound1Final(team.teamId, finalAnswers, calc);
+    await submitRound1Final(team.id, finalAnswers, calc);
     localStorage.removeItem(STORAGE_KEY);
     setScore(calc);
     setSubmitted(true);
@@ -150,10 +150,10 @@ export default function Round1Page() {
 
   useEffect(() => {
     if (submitted || submitting || !gameState || questions.length === 0) return;
-    const startedAt = gameState.roundStatuses?.["1"]?.startedAt;
+    const startedAt = gameState.round_statuses?.["1"]?.startedAt;
     if (!startedAt) return;
 
-    const startedAtMs = startedAt.toMillis();
+    const startedAtMs = new Date(startedAt).getTime();
 
     const tick = () => {
       const state = computeRoundState(startedAtMs, questions.length);
@@ -192,8 +192,8 @@ export default function Round1Page() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newAnswers)); } catch { /* ignore */ }
 
     // If correct — score immediately so leaderboard updates live
-    if (optionIdx === q.correctIndex && team?.teamId) {
-      scoreQuestion(team.teamId, q.id, q.points).catch(() => {/* ignore */});
+    if (optionIdx === q.correct_index && team?.id) {
+      scoreQuestion(team.id, q.id, q.points).catch(() => {/* ignore */});
     }
 
     // If last question — auto-submit after brief feedback delay
@@ -218,7 +218,7 @@ export default function Round1Page() {
 
   // ─── Render states ──────────────────────────────────────────────────────────
 
-  const roundStatus = gameState?.roundStatuses?.["1"]?.status ?? "locked";
+  const roundStatus = gameState?.round_statuses?.["1"]?.status ?? "locked";
 
   if (loading || (!gameState && roundStatus !== "locked")) {
     return (
@@ -240,7 +240,7 @@ export default function Round1Page() {
   }
 
   if (submitted) {
-    const correct = questions.filter((q) => answers[q.id] === q.correctIndex).length;
+    const correct = questions.filter((q) => answers[q.id] === q.correct_index).length;
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">
         <div className="text-center space-y-4">
@@ -349,7 +349,7 @@ export default function Round1Page() {
               const effectiveSelected = justSelected ?? (savedAnswer !== undefined ? savedAnswer : null);
               const showResult = effectiveSelected !== null;
               const isSelected = effectiveSelected === idx;
-              const isCorrect = idx === q.correctIndex;
+              const isCorrect = idx === q.correct_index;
 
               let cls = "text-left px-5 py-4 rounded-xl text-sm border transition-all ";
               if (!showResult) {

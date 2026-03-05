@@ -7,7 +7,7 @@ import { useTeam } from "@/lib/useTeam";
 import {
   subscribeToGameState, startRound, endRound,
   GameState, RoundStatus,
-} from "@/lib/firestore";
+} from "@/lib/database";
 import {
   Lock, CheckCircle, Play, Trophy, Zap, Image,
   LetterText, Gamepad2, ExternalLink
@@ -112,7 +112,7 @@ export default function DashboardPage() {
   }, []);
 
   const getRoundStatus = (id: string): RoundStatus => {
-    return gameState?.roundStatuses?.[id]?.status ?? "locked";
+    return gameState?.round_statuses?.[id]?.status ?? "locked";
   };
 
   const handleEnterRound = (id: string) => {
@@ -126,7 +126,7 @@ export default function DashboardPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/50 via-zinc-900 to-purple-950/30" />
         <div className="relative max-w-6xl mx-auto px-6 py-12">
           <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-            Welcome, {team?.teamName ?? user?.email?.split("@")[0] ?? "Team"} 👋
+            Welcome, {team?.team_name ?? user?.email?.split("@")[0] ?? "Team"} 👋
           </h1>
           <p className="text-zinc-400 mt-2">
             Total Score:{" "}

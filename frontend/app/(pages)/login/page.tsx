@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -17,11 +15,19 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Invalid email or password.");
+        return;
+      }
       router.push("/dashboard");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to login.";
-      setError(msg.includes("invalid") ? "Invalid email or password." : msg);
+    } catch {
+      setError("Failed to connect. Please try again.");
     } finally {
       setLoading(false);
     }

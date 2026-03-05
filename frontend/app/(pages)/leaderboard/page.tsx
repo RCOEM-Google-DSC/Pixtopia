@@ -16,7 +16,7 @@ import {
   LinkedInLogoIcon,
   SewingPinIcon,
 } from "@radix-ui/react-icons";
-import { subscribeToLeaderboard } from "@/lib/firestore";
+import { subscribeToLeaderboard } from "@/lib/database";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

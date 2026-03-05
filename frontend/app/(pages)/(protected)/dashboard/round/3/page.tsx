@@ -6,7 +6,7 @@ import { useTeam } from "@/lib/useTeam";
 import {
   getRoundQuestions, submitRound, subscribeToGameState,
   Question,
-} from "@/lib/firestore";
+} from "@/lib/database";
 import { Clock, CheckCircle, Lock } from "lucide-react";
 import Image from "next/image";
 
@@ -37,7 +37,7 @@ export default function Round3Page() {
 
   useEffect(() => {
     const unsub = subscribeToGameState((gs) => {
-      setRoundStatus(gs?.roundStatuses?.["3"]?.status ?? "locked");
+      setRoundStatus(gs?.round_statuses?.["3"]?.status ?? "locked");
     });
     return () => unsub();
   }, []);
@@ -112,9 +112,9 @@ export default function Round3Page() {
       if (timerRef.current) clearInterval(timerRef.current);
       let calc = 0;
       questions.forEach((q) => {
-        if (finalAnswers[q.id] === q.correctIndex) calc += q.points;
+        if (finalAnswers[q.id] === q.correct_index) calc += q.points;
       });
-      await submitRound(team.teamId, "3", finalAnswers, calc);
+      await submitRound(team.id, "3", finalAnswers, calc);
       setScore(calc);
       setSubmitted(true);
     },
@@ -164,7 +164,7 @@ export default function Round3Page() {
         <h2 className="text-lg font-bold text-center">Pick the correct image</h2>
 
         <div className="grid grid-cols-2 gap-4 w-full">
-          {(q.imageUrls ?? []).map((url, idx) => (
+          {(q.image_urls ?? []).map((url, idx) => (
             <button
               key={idx}
               disabled={!imagesLoaded}

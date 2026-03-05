@@ -1,77 +1,94 @@
-import { auth, db } from "./firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, collection, addDoc, updateDoc } from "firebase/firestore";
+/**
+ * teamAuth.ts
+ * Utility for creating a team with its leader's Supabase Auth account.
+ * Used by the seed script and any admin tooling (not exposed to the UI).
+ *
+ * Requires SUPABASE_SERVICE_ROLE_KEY in environment — server-side only.
+ */
+import { createClient } from "@supabase/supabase-js";
 
 interface UserProfile {
   email: string;
-  hackeRankUrl: string;
-  year: string;  // or number
+  hackerRankUrl: string;
+  year: string;
   phoneNo: string;
   branch: string;
 }
 
 interface TeamData {
   teamName: string;
-  password: string; // Storing as requested (not encrypted)
+  password: string; // Storing plain-text by design
+}
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
 /**
  * Creates a team along with its leader's authentication and user profile.
- * 
+ *
  * Flow:
- * 1. Creates Firebase Auth user for the leader.
- * 2. Creates the leader's profile in the `users` collection.
- * 3. Creates the team document in the `teams` collection.
+ * 1. Creates a Supabase Auth user for the team leader.
+ * 2. Inserts the leader's profile into the `users` table.
+ * 3. Inserts the team document into the `teams` table.
  */
 export async function createTeamWithLeader(
   userProfile: UserProfile,
   teamData: TeamData
 ) {
-  try {
-    // 1. Create an auth account with leaderEmail and password
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      userProfile.email,
-      teamData.password
-    );
-    const leaderUser = userCredential.user;
-    const leaderId = leaderUser.uid; // Firebase unique auth ID
+  const supabase = getAdminClient();
 
-    // 2. Create the user document in the `users` table/collection
-    // We use the auth uid as the document ID for the user
-    const userRef = doc(db, "users", leaderId);
-    await setDoc(userRef, {
-      userId: leaderId, // Storing the unique ID as requested
+  try {
+    // 1. Create Auth user for the team leader
+    const { data: authData, error: authError } =
+      await supabase.auth.admin.createUser({
+        email: userProfile.email,
+        password: teamData.password,
+        email_confirm: true, // Skip email confirmation flow
+      });
+
+    if (authError) throw authError;
+    const leaderId = authData.user.id;
+
+    // 2. Insert the leader's profile into `users`
+    const { error: userError } = await supabase.from("users").insert({
+      id: leaderId,
       email: userProfile.email,
-      hackeRankUrl: userProfile.hackeRankUrl,
+      hacker_rank_url: userProfile.hackerRankUrl,
       year: userProfile.year,
-      phoneNo: userProfile.phoneNo,
+      phone_no: userProfile.phoneNo,
       branch: userProfile.branch,
     });
+    if (userError) throw userError;
 
-    // 3. Create the team document in the `teams` table/collection
-    const teamsCollectionRef = collection(db, "teams");
-    
-    // addDoc will let Firebase automatically generate a unique ID for the team
-    const teamDocRef = await addDoc(teamsCollectionRef, {
-      teamName: teamData.teamName,
-      teamMembersId: [leaderId], // Initially, the leader is the only member
-      leaderId: leaderId,
-      points: 0, // Initial points
-      password: teamData.password, // Not encrypted, as requested
-    });
+    // 3. Insert the team into `teams`
+    const { data: team, error: teamError } = await supabase
+      .from("teams")
+      .insert({
+        team_name: teamData.teamName,
+        leader_id: leaderId,
+        team_members_ids: [leaderId],
+        points: 0,
+        password: teamData.password,
+      })
+      .select("id")
+      .single();
 
-    // Optional: Add the auto-generated teamId back into the team document
-    await updateDoc(teamDocRef, {
-      teamId: teamDocRef.id
-    });
+    if (teamError) throw teamError;
 
     console.log("Successfully created Team and Leader Profile!");
-    
+
     return {
       success: true,
-      leaderId: leaderId,
-      teamId: teamDocRef.id,
+      leaderId,
+      teamId: team.id,
     };
   } catch (error) {
     console.error("Error creating team and leader:", error);

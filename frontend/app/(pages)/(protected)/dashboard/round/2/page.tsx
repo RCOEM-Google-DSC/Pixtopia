@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { subscribeToGameState } from "@/lib/firestore";
+import { subscribeToGameState } from "@/lib/database";
 import { ExternalLink, Code2, Trophy, Lock } from "lucide-react";
 
 export default function Round2Page() {
@@ -12,8 +12,8 @@ export default function Round2Page() {
 
   useEffect(() => {
     const unsub = subscribeToGameState((gs) => {
-      setStatus(gs?.roundStatuses?.["2"]?.status ?? "locked");
-      setHackerrankUrl(gs?.hackerrankUrl ?? "");
+      setStatus(gs?.round_statuses?.["2"]?.status ?? "locked");
+      setHackerrankUrl(gs?.hackerrank_url ?? "");
     });
     return () => unsub();
   }, []);

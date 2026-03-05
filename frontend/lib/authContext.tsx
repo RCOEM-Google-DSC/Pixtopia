@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { auth } from "./firebase";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "./supabase/client";
 
 interface AuthContextType {
   user: User | null;
@@ -24,23 +24,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    const supabase = createClient();
 
-      // Sync session cookie so Next.js middleware can read it
-      if (currentUser) {
-        document.cookie = `pixtopia_auth=${currentUser.uid}; path=/; max-age=86400; SameSite=Lax`;
-      } else {
-        document.cookie = "pixtopia_auth=; path=/; max-age=0";
-      }
+    // Get the initial session
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setLoading(false);
     });
-    return () => unsubscribe();
+
+    // Subscribe to auth state changes (login, logout, token refresh)
+    // @supabase/ssr handles session cookies automatically — no manual cookie management needed.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const logout = async () => {
-    await signOut(auth);
-    document.cookie = "pixtopia_auth=; path=/; max-age=0";
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    // onAuthStateChange will fire and clear user state
   };
 
   return (
