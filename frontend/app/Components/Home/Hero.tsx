@@ -163,8 +163,9 @@ export default function Hero() {
 
                                 {/* Glowing Hero Text */}
                                 <motion.h1
-                                    className="text-[4.5rem] sm:text-[7rem] md:text-[10rem] lg:text-[14rem] xl:text-[16rem] leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-500 text-center"
+                                    className="text-[4.5rem] sm:text-[7rem] md:text-[10rem] lg:text-[14rem] xl:text-[16rem] leading-none font-black tracking-[0.15em] text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-500 text-center"
                                     style={{
+                                        fontFamily: "var(--font-bebas)",
                                         textShadow:
                                             "0 0 50px rgba(255, 255, 255, 0.6), 0 0 100px rgba(255, 255, 255, 0.3), 0 0 150px rgba(100, 150, 255, 0.4)",
                                     }}
