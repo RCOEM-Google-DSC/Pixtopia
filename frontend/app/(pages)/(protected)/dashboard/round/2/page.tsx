@@ -2,21 +2,51 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/authContext";
 import { subscribeToGameState } from "@/lib/database";
+import { createClient } from "@/lib/supabase/client";
 import { ExternalLink, Code2, Trophy, Lock } from "lucide-react";
 
 export default function Round2Page() {
   const router = useRouter();
+  const { user } = useAuth();
   const [status, setStatus] = useState("locked");
-  const [hackerrankUrl, setHackerrankUrl] = useState("");
+  const [contestUrl, setContestUrl] = useState("");
 
   useEffect(() => {
     const unsub = subscribeToGameState((gs) => {
       setStatus(gs?.round_statuses?.["2"]?.status ?? "locked");
-      setHackerrankUrl(gs?.hackerrank_url ?? "");
     });
     return () => unsub();
   }, []);
+
+  // Fetch the user's year and pick the right contest URL
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const supabase = createClient();
+    supabase
+      .from("users")
+      .select("year")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        const year = data?.year?.trim() ?? "";
+        // 1st year → contest URL 1, everyone else → contest URL 2
+        const isFirstYear = year === "1" || year.toLowerCase().startsWith("1st");
+        if (isFirstYear) {
+          setContestUrl(
+            process.env.NEXT_PUBLIC_HACKERRANK_CONTEST_URL_1 ||
+              "https://www.hackerrank.com"
+          );
+        } else {
+          setContestUrl(
+            process.env.NEXT_PUBLIC_HACKERRANK_CONTEST_URL_2 ||
+              "https://www.hackerrank.com"
+          );
+        }
+      });
+  }, [user?.id]);
 
   const scores = [
     { label: "Easy", count: 3, each: 200, color: "text-emerald-400" },
@@ -76,7 +106,7 @@ export default function Round2Page() {
                 </div>
               ) : (
                 <a
-                  href={hackerrankUrl || "https://www.hackerrank.com"}
+                  href={contestUrl || "https://www.hackerrank.com"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 rounded-xl font-bold text-sm transition-all"
@@ -102,3 +132,4 @@ export default function Round2Page() {
     </div>
   );
 }
+

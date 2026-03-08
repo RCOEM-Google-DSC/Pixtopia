@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -15,6 +16,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
+      // Step 1: Call the server API — this ensures the admin user
+      // exists in Supabase Auth (auto-creates on first login).
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -22,9 +25,22 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Invalid email or password.");
+        setError(data.error ?? "Invalid login credentials");
         return;
       }
+
+      // Step 2: Sign in on the client side so the auth context
+      // (onAuthStateChange) picks up the session immediately.
+      const supabase = createClient();
+      const { error: clientErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (clientErr) {
+        setError(clientErr.message);
+        return;
+      }
+
       router.push("/dashboard");
     } catch {
       setError("Failed to connect. Please try again.");
@@ -93,3 +109,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

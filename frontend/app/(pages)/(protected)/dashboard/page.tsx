@@ -10,7 +10,7 @@ import {
 } from "@/lib/database";
 import {
   Lock, CheckCircle, Play, Trophy, Zap, Image,
-  LetterText, Gamepad2, ExternalLink
+  LetterText, Gamepad2, ExternalLink, RefreshCw
 } from "lucide-react";
 
 const ROUNDS = [
@@ -104,6 +104,12 @@ export default function DashboardPage() {
   const { user, isAdmin } = useAuth();
   const { team, submission } = useTeam();
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<{
+    success?: boolean;
+    summary?: { totalTeams: number; matchedTeams: number; unmatchedTeams: number; totalPointsAdded: number };
+    error?: string;
+  } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -113,6 +119,25 @@ export default function DashboardPage() {
 
   const getRoundStatus = (id: string): RoundStatus => {
     return gameState?.round_statuses?.[id]?.status ?? "locked";
+  };
+
+  const handleScrapeHackerrank = async () => {
+    if (scraping) return;
+    setScraping(true);
+    setScrapeResult(null);
+    try {
+      const res = await fetch("/api/scrape-hackerrank", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setScrapeResult({ success: true, summary: data.summary });
+      } else {
+        setScrapeResult({ success: false, error: data.error || "Failed to scrape scores" });
+      }
+    } catch (err) {
+      setScrapeResult({ success: false, error: "Network error. Please try again." });
+    } finally {
+      setScraping(false);
+    }
   };
 
   const handleEnterRound = (id: string) => {
@@ -211,27 +236,71 @@ export default function DashboardPage() {
 
                   {/* Admin controls */}
                   {isAdmin && (
-                    <div className="flex gap-2">
-                      <button
-                        disabled={status === "active" || status === "completed"}
-                        onClick={() => startRound(round.id)}
-                        className="flex-1 py-2 rounded-xl text-xs font-semibold bg-green-600 hover:bg-green-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white transition-all flex items-center justify-center gap-1"
-                      >
-                        <Play size={12} /> Start
-                      </button>
-                      <button
-                        disabled={status !== "active"}
-                        onClick={() => endRound(round.id)}
-                        className="flex-1 py-2 rounded-xl text-xs font-semibold bg-red-700 hover:bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white transition-all"
-                      >
-                        End Round
-                      </button>
-                      <button
-                        onClick={() => handleEnterRound(round.id)}
-                        className="flex-1 py-2 rounded-xl text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-white transition-all"
-                      >
-                        Preview
-                      </button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <button
+                          disabled={status === "active" || status === "completed"}
+                          onClick={() => startRound(round.id)}
+                          className="flex-1 py-2 rounded-xl text-xs font-semibold bg-green-600 hover:bg-green-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white transition-all flex items-center justify-center gap-1"
+                        >
+                          <Play size={12} /> Start
+                        </button>
+                        <button
+                          disabled={status !== "active"}
+                          onClick={() => endRound(round.id)}
+                          className="flex-1 py-2 rounded-xl text-xs font-semibold bg-red-700 hover:bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white transition-all"
+                        >
+                          End Round
+                        </button>
+                        <button
+                          onClick={() => handleEnterRound(round.id)}
+                          className="flex-1 py-2 rounded-xl text-xs font-semibold bg-zinc-700 hover:bg-zinc-600 text-white transition-all"
+                        >
+                          Preview
+                        </button>
+                      </div>
+
+                      {/* Scrape HackerRank button — only for Round 2 */}
+                      {round.id === "2" && (
+                        <div className="space-y-2">
+                          <button
+                            disabled={scraping}
+                            onClick={handleScrapeHackerrank}
+                            className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2
+                              ${scraping
+                                ? "bg-cyan-800 text-cyan-300 cursor-wait"
+                                : "bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-500 hover:to-teal-400 text-white"
+                              }`}
+                          >
+                            <RefreshCw size={14} className={scraping ? "animate-spin" : ""} />
+                            {scraping ? "Scraping HackerRank…" : "🔄 Scrape HackerRank Scores"}
+                          </button>
+
+                          {/* Scrape result feedback */}
+                          {scrapeResult && (
+                            <div
+                              className={`rounded-xl px-4 py-3 text-xs border ${
+                                scrapeResult.success
+                                  ? "bg-green-500/10 border-green-500/30 text-green-300"
+                                  : "bg-red-500/10 border-red-500/30 text-red-300"
+                              }`}
+                            >
+                              {scrapeResult.success && scrapeResult.summary ? (
+                                <div className="space-y-1">
+                                  <p className="font-semibold">✅ Scores imported successfully!</p>
+                                  <p>Teams matched: {scrapeResult.summary.matchedTeams}/{scrapeResult.summary.totalTeams}</p>
+                                  <p>Total points added: <span className="text-yellow-400 font-bold">{scrapeResult.summary.totalPointsAdded}</span></p>
+                                  {scrapeResult.summary.unmatchedTeams > 0 && (
+                                    <p className="text-amber-400">⚠ {scrapeResult.summary.unmatchedTeams} team(s) had no matching HackerRank username</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p>❌ {scrapeResult.error}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

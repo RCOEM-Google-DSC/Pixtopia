@@ -43,9 +43,9 @@ export default function Hero() {
 
     return (
         <div className="relative w-full min-h-screen bg-black text-white font-sans overflow-x-hidden">
-            {/* HERO SECTION */}
+      
             <div className="relative w-full h-[100vh] overflow-hidden">
-                {/* Background Image - Always Visible */}
+           
                 <div
                     className="absolute inset-0 w-full h-full bg-cover bg-center z-0 opacity-40"
                     style={{
@@ -55,7 +55,7 @@ export default function Hero() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-black z-0" />
 
-                {/* Cinematic Purple Flares */}
+              
                 <div
                     className="absolute rounded-full pointer-events-none z-0"
                     style={{
@@ -130,9 +130,6 @@ export default function Hero() {
                     )}
                 </AnimatePresence>
 
-                {/* GDG Logo is now inside the main content area below */}
-
-                {/* Main Content Reveal */}
                 <div className="relative z-20 w-full h-full flex flex-col items-center justify-center pointer-events-none">
                     <AnimatePresence>
                         {isVideoFinished && (

@@ -38,26 +38,15 @@ export async function createClient() {
  * NEVER expose this on the client.
  */
 export async function createAdminClient() {
-  const cookieStore = await cookies();
-
-  return createServerClient(
+  // Use the raw @supabase/supabase-js client with the service role key.
+  // This bypasses RLS and does NOT read/write session cookies — which is
+  // exactly what we want for admin operations.
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Safe to ignore in Server Components
-          }
-        },
-      },
+      auth: { autoRefreshToken: false, persistSession: false },
     }
   );
 }
