@@ -250,6 +250,38 @@ export async function getTeamByLeader(
   return teams[0] ?? null;
 }
 
+/**
+ * Subscribes to real-time updates for a specific team row.
+ * Calls callback with the updated TeamData whenever points (or any field) change.
+ * Returns an unsubscribe function.
+ */
+export function subscribeToTeam(
+  teamId: string,
+  callback: (team: TeamData) => void
+): () => void {
+  const supabase = getClient();
+
+  const channel: RealtimeChannel = supabase
+    .channel(nextChannel(`team_${teamId}`))
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "teams",
+        filter: `id=eq.${teamId}`,
+      },
+      (payload) => {
+        callback(payload.new as TeamData);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
 // ─── Leaderboard (real-time) ──────────────────────────────────────────────────
 
 /**

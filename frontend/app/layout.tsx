@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, Bebas_Neue } from "next/font/google";
 import "./globals.css";
-import Navbar from "./Components/Navigation/Navbar";
+// import Navbar from "./Components/Navigation/Navbar";
 import { AuthProvider } from "@/lib/authContext";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -38,6 +39,7 @@ export default function RootLayout({
         <AuthProvider>
           {/* <Navbar /> */}
           {children}
+          <Toaster position="bottom-right" theme="dark" closeButton />
         </AuthProvider>
       </body>
     </html>

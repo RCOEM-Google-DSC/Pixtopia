@@ -173,3 +173,67 @@ create policy "submissions: service role full access"
 -- ──────────────────────────────────────────────────────────────
 alter publication supabase_realtime add table public.game_state;
 alter publication supabase_realtime add table public.teams;
+
+
+-- ──────────────────────────────────────────────────────────────
+-- 7. ROUND 3 (IMAGE RECOGNITION)
+-- ──────────────────────────────────────────────────────────────
+create table if not exists public.round_3_questions (
+  id             uuid primary key default gen_random_uuid(),
+  question_order integer not null unique,
+  question       text not null,          -- The Pixar riddle or prompt
+  image_urls     text[] not null,        -- 4 image URLs as choices
+  correct_index  integer not null,       -- 0 to 3 (never exposed to client)
+  hints          text[] not null default '{}',
+  points         integer not null default 100
+);
+
+alter table public.round_3_questions enable row level security;
+
+create policy "round_3_questions: authenticated can read"
+  on public.round_3_questions for select
+  to authenticated
+  using (true);
+
+create policy "round_3_questions: service role full access"
+  on public.round_3_questions for all
+  to service_role
+  using (true)
+  with check (true);
+
+
+create table if not exists public.team_round_progress (
+  team_id              uuid not null references public.teams(id) on delete cascade,
+  round_id             text not null,
+  hints_used           integer not null default 0,
+  hints_per_question   jsonb not null default '{}',
+  points_spent         integer not null default 0,
+  questions_answered   integer not null default 0,
+  start_time           timestamp with time zone default now(),
+  is_completed         boolean not null default false,
+  primary key (team_id, round_id)
+);
+
+alter table public.team_round_progress enable row level security;
+
+create policy "team_round_progress: authenticated can read"
+  on public.team_round_progress for select
+  to authenticated
+  using (true);
+
+create policy "team_round_progress: authenticated can insert"
+  on public.team_round_progress for insert
+  to authenticated
+  with check (true);
+
+create policy "team_round_progress: authenticated can update"
+  on public.team_round_progress for update
+  to authenticated
+  using (true)
+  with check (true);
+
+create policy "team_round_progress: service role full access"
+  on public.team_round_progress for all
+  to service_role
+  using (true)
+  with check (true);
