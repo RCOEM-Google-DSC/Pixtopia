@@ -1,0 +1,8 @@
+{
+  "track_id": "round4_part_a_20260312",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-03-12T10:00:00Z",
+  "updated_at": "2026-03-12T10:00:00Z",
+  "description": "Implementation of Round 4 Part A Visual Puzzle with segmented input and incrementing hint costs."
+}
