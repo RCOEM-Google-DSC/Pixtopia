@@ -10,7 +10,7 @@ import {
 } from "@/lib/database";
 import { Clock, CheckCircle, AlertCircle, Lock } from "lucide-react";
 
-const PER_Q_SECONDS = 120;
+const PER_Q_SECONDS = 80;
 const STORAGE_KEY = "pixtopia_r1_answers";
 
 // ─── Seeded deterministic shuffle (Fisher-Yates with LCG PRNG) ───────────────
@@ -202,13 +202,7 @@ export default function Round1Page() {
     }
   };
 
-  const handleSkip = () => {
-    if (currentQ === questions.length - 1) {
-      doSubmit(answers);
-    }
-    // else: server time will advance automatically — but we can also jump ahead
-    // by not doing anything (server drives current Q)
-  };
+
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60).toString().padStart(2, "0");
@@ -242,18 +236,57 @@ export default function Round1Page() {
   if (submitted) {
     const correct = questions.filter((q) => answers[q.id] === q.correct_index).length;
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">
-        <div className="text-center space-y-4">
-          <CheckCircle size={64} className="text-green-400 mx-auto" />
-          <h1 className="text-3xl font-bold">Round 1 Complete!</h1>
-          <p className="text-zinc-400">{correct} / {questions.length} correct</p>
-          <p className="text-5xl font-black text-yellow-400">{score} GC</p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="mt-6 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-semibold transition-all"
-          >
-            Back to Dashboard
-          </button>
+      <div className="min-h-screen bg-zinc-950 text-white flex flex-col py-10 px-4">
+        <div className="max-w-3xl w-full mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <CheckCircle size={64} className="text-green-400 mx-auto" />
+            <h1 className="text-3xl font-bold">Round 1 Complete!</h1>
+            <p className="text-zinc-400">{correct} / {questions.length} correct</p>
+            <p className="text-5xl font-black text-yellow-400">{score} GC</p>
+          </div>
+
+          <div className="space-y-4 bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800">
+            <h2 className="text-xl font-bold border-b border-zinc-800 pb-4 mb-4">Summary</h2>
+            <div className="space-y-4">
+              {questions.map((q, i) => {
+                const userChoice = answers[q.id];
+                const isCorrect = userChoice === q.correct_index;
+                
+                return (
+                  <div key={q.id} className={`p-4 rounded-xl border ${isCorrect ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                    <p className="text-sm font-semibold mb-3 leading-relaxed text-zinc-200">
+                      {i + 1}. {q.question}
+                    </p>
+                    <div className="space-y-2 text-sm">
+                      <p>
+                        <span className="text-zinc-500 mr-2">Your Answer:</span>
+                        <span className={isCorrect ? "text-green-400 font-medium" : "text-red-400 font-medium"}>
+                          {userChoice !== undefined ? q.options?.[userChoice] : "No answer"}
+                        </span>
+                      </p>
+                      {!isCorrect && (
+                        <p>
+                          <span className="text-zinc-500 mr-2">Correct Answer:</span>
+                          <span className="text-green-400 font-medium">
+                            {q.options?.[q.correct_index]}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="text-center pt-4">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-md font-semibold transition-all inline-flex items-center gap-2"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -354,14 +387,10 @@ export default function Round1Page() {
               let cls = "text-left px-5 py-4 rounded-xl text-sm border transition-all ";
               if (!showResult) {
                 cls += "bg-zinc-900 border-zinc-700 text-zinc-300 hover:border-indigo-500 hover:bg-indigo-500/5 cursor-pointer";
-              } else if (isSelected && isCorrect) {
-                cls += "bg-green-500/20 border-green-500 text-green-300";
-              } else if (isSelected && !isCorrect) {
-                cls += "bg-red-500/20 border-red-500 text-red-300";
-              } else if (isCorrect) {
-                cls += "bg-green-500/10 border-green-500/50 text-green-400";
+              } else if (isSelected) {
+                cls += "bg-indigo-500/20 border-indigo-500 text-indigo-300";
               } else {
-                cls += "bg-zinc-900 border-zinc-800 text-zinc-500";
+                cls += "bg-zinc-900 border-zinc-800 text-zinc-500 opacity-50";
               }
 
               return (
@@ -387,17 +416,7 @@ export default function Round1Page() {
             </p>
           )}
 
-          {/* Skip — only show if not yet answered */}
-          {justSelected === null && answers[q.id] === undefined && (
-            <div className="text-center">
-              <button
-                onClick={handleSkip}
-                className="text-xs text-zinc-600 hover:text-zinc-400 underline transition-colors"
-              >
-                {isLastQ ? "Submit without answering" : "Skip — timer will auto-advance"}
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
     </div>
