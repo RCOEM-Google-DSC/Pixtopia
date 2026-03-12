@@ -2,13 +2,12 @@ import { createClient as createSupabaseClient } from "./supabase/client";
 import type { SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
 
 // ─── Singleton browser client ─────────────────────────────────────────────────
-// One instance = one WebSocket connection shared across all subscribers.
-// Never call createClient() inside subscribe functions — that creates a new
-// connection per call and causes the "wss:// connection interrupted" error.
-let _client: SupabaseClient | null = null;
+// Delegates to createClient() in supabase/client.ts which is already a
+// module-level singleton. Calling createSupabaseClient() here returns the
+// same instance every time, so only one WebSocket connection and one Web
+// Lock is ever held across the whole app.
 function getClient(): SupabaseClient {
-  if (!_client) _client = createSupabaseClient();
-  return _client;
+  return createSupabaseClient();
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,12 +29,12 @@ export interface Question {
   id: string;
   round_id: string;
   order: number;
-  question?: string;      // Round 1
-  options?: string[];     // Round 1
-  correct_index: number;  // All rounds
-  image_urls?: string[];  // Rounds 3 & 4
-  letters?: string[];     // Round 4
-  answer?: string;        // Round 4
+  question?: string; // Round 1
+  options?: string[]; // Round 1
+  correct_index: number; // All rounds
+  image_urls?: string[]; // Rounds 3 & 4
+  letters?: string[]; // Round 4
+  answer?: string; // Round 4
   points: number;
 }
 
@@ -50,9 +49,21 @@ export interface TeamData {
 
 export interface SubmissionData {
   team_id: string;
-  round1?: { answers: Record<string, number>; score: number; submitted_at: string };
-  round3?: { answers: Record<string, number>; score: number; submitted_at: string };
-  round4?: { answers: Record<string, string>; score: number; submitted_at: string };
+  round1?: {
+    answers: Record<string, number>;
+    score: number;
+    submitted_at: string;
+  };
+  round3?: {
+    answers: Record<string, number>;
+    score: number;
+    submitted_at: string;
+  };
+  round4?: {
+    answers: Record<string, string>;
+    score: number;
+    submitted_at: string;
+  };
 }
 
 // ─── Channel counter — ensures each subscription gets a unique channel name ───
@@ -80,7 +91,7 @@ export async function getGameState(): Promise<GameState | null> {
  * Returns an unsubscribe function (mirrors Firestore onSnapshot API).
  */
 export function subscribeToGameState(
-  callback: (state: GameState | null) => void
+  callback: (state: GameState | null) => void,
 ): () => void {
   const supabase = getClient();
 
@@ -99,7 +110,7 @@ export function subscribeToGameState(
       },
       (payload) => {
         callback(payload.new as GameState);
-      }
+      },
     )
     .subscribe();
 
@@ -161,7 +172,7 @@ export async function getRoundQuestions(roundId: string): Promise<Question[]> {
 export async function scoreQuestion(
   teamId: string,
   questionId: string,
-  points: number
+  points: number,
 ): Promise<void> {
   const key = `pixtopia_r1_scored_${teamId}`;
   let scored: string[] = [];
@@ -195,7 +206,7 @@ export async function scoreQuestion(
 export async function submitRound1Final(
   teamId: string,
   answers: Record<string, number>,
-  score: number
+  score: number,
 ): Promise<void> {
   await fetch(`/api/submissions/${teamId}`, {
     method: "POST",
@@ -216,7 +227,7 @@ export async function submitRound(
   teamId: string,
   roundId: string,
   answers: Record<string, number | string>,
-  score: number
+  score: number,
 ): Promise<void> {
   await fetch(`/api/submissions/${teamId}`, {
     method: "POST",
@@ -229,7 +240,7 @@ export async function submitRound(
  * Fetch a team's existing submission record.
  */
 export async function getTeamSubmission(
-  teamId: string
+  teamId: string,
 ): Promise<SubmissionData | null> {
   const res = await fetch(`/api/submissions/${teamId}`);
   if (!res.ok) return null;
@@ -242,7 +253,7 @@ export async function getTeamSubmission(
  * Returns the team where leader_id matches the given user ID.
  */
 export async function getTeamByLeader(
-  leaderId: string
+  leaderId: string,
 ): Promise<TeamData | null> {
   const res = await fetch(`/api/teams?leaderId=${leaderId}`);
   if (!res.ok) return null;
@@ -257,7 +268,7 @@ export async function getTeamByLeader(
  */
 export function subscribeToTeam(
   teamId: string,
-  callback: (team: TeamData) => void
+  callback: (team: TeamData) => void,
 ): () => void {
   const supabase = getClient();
 
@@ -273,7 +284,7 @@ export function subscribeToTeam(
       },
       (payload) => {
         callback(payload.new as TeamData);
-      }
+      },
     )
     .subscribe();
 
@@ -291,7 +302,7 @@ export function subscribeToTeam(
  * Returns an unsubscribe function.
  */
 export function subscribeToLeaderboard(
-  callback: (data: { name: string; points: number }[]) => void
+  callback: (data: { name: string; points: number }[]) => void,
 ): () => void {
   const supabase = getClient();
 
@@ -299,9 +310,7 @@ export function subscribeToLeaderboard(
     const res = await fetch("/api/teams");
     if (!res.ok) return;
     const teams: TeamData[] = await res.json();
-    callback(
-      teams.map((t) => ({ name: t.team_name, points: t.points }))
-    );
+    callback(teams.map((t) => ({ name: t.team_name, points: t.points })));
   };
 
   // Fetch initial data immediately
@@ -319,7 +328,7 @@ export function subscribeToLeaderboard(
       () => {
         // Re-fetch full sorted leaderboard on any team update
         fetchAndEmit();
-      }
+      },
     )
     .subscribe();
 
