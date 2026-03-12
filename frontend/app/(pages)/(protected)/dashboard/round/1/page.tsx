@@ -241,8 +241,30 @@ export default function Round1Page() {
           <div className="text-center space-y-4">
             <CheckCircle size={64} className="text-green-400 mx-auto" />
             <h1 className="text-3xl font-bold">Round 1 Complete!</h1>
-            <p className="text-zinc-400">{correct} / {questions.length} correct</p>
-            <p className="text-5xl font-black text-yellow-400">{score} GC</p>
+            
+            <div className="flex justify-center gap-6 mt-2 mb-4 w-full max-w-lg mx-auto">
+              <div className="flex-1 bg-green-500/10 border border-green-500/20 px-6 py-4 rounded-xl flex flex-col items-center justify-center">
+                <p className="text-green-500 font-black text-4xl mb-1">{correct}</p>
+                <p className="text-zinc-400 text-[10px] uppercase font-bold tracking-widest">Correct</p>
+              </div>
+              <div className="flex-1 bg-red-500/10 border border-red-500/20 px-6 py-4 rounded-xl flex flex-col items-center justify-center">
+                <p className="text-red-500 font-black text-4xl mb-1">{questions.length - correct}</p>
+                <p className="text-zinc-400 text-[10px] uppercase font-bold tracking-widest">Wrong</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 w-full max-w-lg mx-auto mt-2">
+              <div className="bg-zinc-900/80 border border-zinc-800 p-5 rounded-xl flex flex-col items-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-yellow-500/5" />
+                <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1 relative z-10">Round Points</p>
+                <p className="text-3xl font-black text-yellow-500 relative z-10">+{score}</p>
+              </div>
+              <div className="bg-zinc-900/80 border border-zinc-800 p-5 rounded-xl flex flex-col items-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-indigo-500/5" />
+                <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1 relative z-10">Total Points</p>
+                <p className="text-3xl font-black text-indigo-400 relative z-10">{team?.points !== undefined ? team.points : score}</p>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4 bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800">
@@ -282,9 +304,9 @@ export default function Round1Page() {
           <div className="text-center pt-4">
             <button
               onClick={() => router.push("/dashboard")}
-              className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-md font-semibold transition-all inline-flex items-center gap-2"
+              className="mt-4 mb-8 bg-zinc-800 hover:bg-zinc-700 text-white px-10 py-6 text-lg tracking-widest font-black uppercase rounded-xl transition-all hover:scale-105 inline-flex items-center gap-2"
             >
-              Back to Dashboard
+              Return to Dashboard
             </button>
           </div>
         </div>

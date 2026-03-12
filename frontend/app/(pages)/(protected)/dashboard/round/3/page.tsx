@@ -5,8 +5,7 @@ import { useTeam } from "@/lib/useTeam";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import DashboardNavbar from "@/app/Components/Navigation/DashboardNavbar";
-import { toast } from "sonner";
+import { Clock } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +25,7 @@ interface Question {
   image_urls: string[];
   hints: string[];
   points: number;
+  hint_point: number;
 }
 
 interface TeamProgress {
@@ -34,6 +34,7 @@ interface TeamProgress {
   questions_answered: number;
   points_spent: number;
   is_completed: boolean;
+  question_start_times?: Record<string, string>;
 }
 
 const TOTAL_QUESTIONS = 5;
@@ -49,6 +50,9 @@ export default function Round3Page() {
   // currentQuestionIndex is derived from progress.questions_answered on load,
   // then advanced locally on correct answers without re-fetching.
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [roundScore, setRoundScore] = useState(0);
+  const [teamPoints, setTeamPoints] = useState(0);
 
   const fetchState = async () => {
     try {
@@ -60,11 +64,12 @@ export default function Round3Page() {
       }
       setQuestions(data.questions);
       setProgress(data.teamProgress);
+      setRoundScore(data.roundScore ?? 0);
+      setTeamPoints(data.teamPoints ?? 0);
       // Resume from where the team left off
       setCurrentQuestionIndex(data.teamProgress?.questions_answered ?? 0);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load round state");
     } finally {
       setLoading(false);
     }
@@ -85,14 +90,39 @@ export default function Round3Page() {
 
   const unlockedHints = currentQuestion?.hints.slice(0, hintsUnlockedForCurrent) ?? [];
 
-  // Global cost: (total_hints_used + 1) * 10
-  const nextHintCost = progress ? (progress.hints_used + 1) * 10 : 10;
+  // Deduct based on current question's hint_point
+  const nextHintCost = currentQuestion?.hint_point ?? 10;
 
   const allHintsExhausted =
     currentQuestion ? hintsUnlockedForCurrent >= currentQuestion.hints.length : true;
 
-  const handleSubmit = async () => {
-    if (selectedOption === null || !currentQuestion) return;
+  useEffect(() => {
+    if (!currentQuestion || !progress?.question_start_times) return;
+    const startTimeStr = progress.question_start_times[currentQuestion.question_order];
+    if (!startTimeStr) return;
+    
+    const startTime = new Date(startTimeStr).getTime();
+    
+    const tick = () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      const remaining = Math.max(0, 60 - elapsed);
+      setTimeLeft(remaining);
+      
+      if (remaining === 0 && !submitting) {
+         handleSubmit(true);
+      }
+    };
+    
+    tick(); // immediate first tick to prevent UI flash
+    const interval = setInterval(tick, 1000);
+    
+    return () => clearInterval(interval);
+  }, [currentQuestion, progress, submitting]);
+
+  const handleSubmit = async (isAuto = false) => {
+    if (!isAuto && selectedOption === null) return;
+    if (!currentQuestion) return;
     setSubmitting(true);
     try {
       const res = await fetch("/api/rounds/3/submit", {
@@ -105,36 +135,34 @@ export default function Round3Page() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Submission failed");
         return;
       }
 
-      if (data.isCorrect) {
-        toast.success(`Correct! +${data.awardedPoints} points.`);
-
-        if (data.isRoundComplete) {
-          // Mark round complete in local state — triggers completed screen
-          setProgress((prev) =>
-            prev ? { ...prev, questions_answered: data.questionsAnswered, is_completed: true } : null
-          );
-        } else {
-          // Advance to next question optimistically
-          setProgress((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  questions_answered: data.questionsAnswered,
-                }
-              : null
-          );
-          setCurrentQuestionIndex((i) => i + 1);
-          setSelectedOption(null);
-        }
+      if (data.isRoundComplete) {
+        // We will just re-fetch state to get the final score, correct answers correctly matched up from backend!
+        fetchState();
+        setProgress((prev) =>
+          prev ? { ...prev, questions_answered: data.questionsAnswered, is_completed: true } : null
+        );
       } else {
-        toast.error(data.message || "Incorrect answer. Try again!");
+        // Advance to next question optimistically
+        setProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                questions_answered: data.questionsAnswered,
+                question_start_times: {
+                  ...prev.question_start_times,
+                  [currentQuestion.question_order + 1]: data.nextStartTime,
+                }
+              }
+            : null
+        );
+        setCurrentQuestionIndex((i) => i + 1);
+        setSelectedOption(null);
       }
     } catch {
-      toast.error("Submission failed");
+      // ignore
     } finally {
       setSubmitting(false);
     }
@@ -153,11 +181,8 @@ export default function Round3Page() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Failed to unlock hint");
         return;
       }
-
-      toast.success(`Hint unlocked! Cost: ${data.cost} points.`);
 
       // Optimistic update — no re-fetch needed
       setProgress((prev) => {
@@ -174,7 +199,7 @@ export default function Round3Page() {
         };
       });
     } catch {
-      toast.error("Hint request failed");
+      // ignore
     } finally {
       setRequestingHint(false);
     }
@@ -184,7 +209,6 @@ export default function Round3Page() {
   if (loading || teamLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col">
-        <DashboardNavbar />
         <div className="p-8 space-y-8 max-w-5xl mx-auto w-full" data-testid="loading-state">
           <Skeleton className="h-12 w-3/4 bg-zinc-900" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -199,16 +223,21 @@ export default function Round3Page() {
 
   // ── Completed ────────────────────────────────────────────────────────────────
   if (progress?.is_completed) {
+    const correctCount = questions.filter(q => (q as any).is_correct).length;
+    const wrongCount = questions.length - correctCount;
+    // We expect teamPoints from state, we'll need to grab it from state logic
+    // But since it wasn't saved in local scope variables earlier, I will use team.points from useTeam hook!
+    // And actually, I should also extract the fetched round score from the API response to render.
+
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col">
-        <DashboardNavbar />
         <div
-          className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center"
+          className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center mt-12"
           data-testid="completed-state"
         >
-          <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/30 mb-2">
+          <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/30 mb-2 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
             <svg
-              className="w-10 h-10 text-emerald-500"
+              className="w-10 h-10 text-emerald-500 animate-[bounce_2s_infinite]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -221,15 +250,39 @@ export default function Round3Page() {
               />
             </svg>
           </div>
-          <h1 className="text-4xl font-black text-white uppercase tracking-tighter">
-            Round 3 Completed!
+          <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter shadow-sm mb-2">
+            Round 3 Complete!
           </h1>
-          <p className="text-zinc-400 max-w-md">
-            Excellent work! You&apos;ve identified all {TOTAL_QUESTIONS} characters. Please wait
-            for the next round to be unlocked.
+          <p className="text-zinc-400 max-w-md pb-4">
+            Excellent work! Here&apos;s your summary for this round:
           </p>
+
+          <div className="flex justify-center gap-6 mt-2 mb-4 w-full max-w-lg">
+            <div className="flex-1 bg-green-500/10 border border-green-500/20 px-6 py-4 rounded-xl flex flex-col items-center justify-center">
+              <p className="text-green-500 font-black text-4xl mb-1">{correctCount}</p>
+              <p className="text-zinc-400 text-[10px] uppercase font-bold tracking-widest">Correct</p>
+            </div>
+            <div className="flex-1 bg-red-500/10 border border-red-500/20 px-6 py-4 rounded-xl flex flex-col items-center justify-center">
+              <p className="text-red-500 font-black text-4xl mb-1">{wrongCount}</p>
+              <p className="text-zinc-400 text-[10px] uppercase font-bold tracking-widest">Wrong</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 w-full max-w-lg mx-auto mt-2">
+            <div className="bg-zinc-900/80 border border-zinc-800 p-5 rounded-xl flex flex-col items-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-yellow-500/5" />
+              <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1 relative z-10">Round Points</p>
+              <p className="text-3xl font-black text-yellow-500 relative z-10">+{roundScore}</p>
+            </div>
+            <div className="bg-zinc-900/80 border border-zinc-800 p-5 rounded-xl flex flex-col items-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-indigo-500/5" />
+              <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1 relative z-10">Total Points</p>
+              <p className="text-3xl font-black text-indigo-400 relative z-10">{teamPoints}</p>
+            </div>
+          </div>
+
           <Button
-            className="mt-4 bg-zinc-800 hover:bg-zinc-700 text-white px-8"
+            className="mt-8 bg-zinc-800 hover:bg-zinc-700 text-white px-10 py-6 text-lg tracking-widest font-black uppercase rounded-xl transition-all hover:scale-105"
             onClick={() => (window.location.href = "/dashboard")}
           >
             Return to Dashboard
@@ -242,8 +295,6 @@ export default function Round3Page() {
   // ── Question view ────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <DashboardNavbar />
-
       <main className="flex-1 p-8 max-w-5xl mx-auto w-full space-y-10">
         {currentQuestion && (
           <>
@@ -253,9 +304,30 @@ export default function Round3Page() {
                   Question {currentQuestionIndex + 1} of {TOTAL_QUESTIONS}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-white leading-tight tracking-tight">
+              <h1 className="text-3xl md:text-4xl font-black text-white leading-tight tracking-tight mt-6">
                 {currentQuestion.question}
               </h1>
+              
+              <div className="w-full max-w-2xl mx-auto mt-6 space-y-2 h-[40px]">
+                {timeLeft !== null && (
+                  <>
+                    <div className="flex items-center justify-center gap-2 font-mono font-bold text-2xl">
+                      <Clock size={24} className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-indigo-400"} />
+                      <span className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-yellow-400"}>
+                        00:{timeLeft.toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-2">
+                      <div
+                        className={`h-full rounded-full transition-all duration-1000 ${
+                          timeLeft <= 10 ? "bg-red-500" : timeLeft <= 30 ? "bg-amber-400" : "bg-indigo-400"
+                        }`}
+                        style={{ width: `${(timeLeft / 60) * 100}%` }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {unlockedHints.length > 0 && (
@@ -309,54 +381,36 @@ export default function Round3Page() {
             </div>
 
             <div className="flex flex-col items-center gap-6 pt-6">
-              <div className="flex items-center gap-4">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900 px-6"
-                      disabled={requestingHint || allHintsExhausted}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900 px-6"
+                    disabled={requestingHint || allHintsExhausted}
+                  >
+                    {requestingHint ? "Unlocking..." : hintsUnlockedForCurrent === 0 ? "Get Hint" : "Get 2nd Hint"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Purchase a Hint?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Unlocking a hint will cost{" "}
+                      <span className="font-bold text-indigo-400">{nextHintCost} points</span>.
+                      Your score will be updated immediately. Are you sure?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleGetHint}
+                      className="bg-indigo-600 hover:bg-indigo-700"
                     >
-                      {requestingHint ? "Unlocking..." : "Get Hint"}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Purchase a Hint?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Unlocking a hint will cost{" "}
-                        <span className="font-bold text-indigo-400">{nextHintCost} points</span>.
-                        Your score will be updated immediately. Are you sure?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleGetHint}
-                        className="bg-indigo-600 hover:bg-indigo-700"
-                      >
-                        Purchase Hint
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <Button
-                  size="lg"
-                  className={`px-12 py-6 text-xl font-black uppercase tracking-widest transition-all duration-300 ${
-                    selectedOption !== null
-                      ? "bg-indigo-600 hover:bg-indigo-500 hover:shadow-[0_0_30px_rgba(79,70,229,0.4)]"
-                      : "bg-zinc-800 text-zinc-500"
-                  }`}
-                  disabled={selectedOption === null || submitting}
-                  onClick={handleSubmit}
-                >
-                  {submitting ? "Processing..." : "Submit Answer"}
-                </Button>
-              </div>
-              <p className="text-xs text-zinc-500 font-medium">
-                Double check your selection before submitting
-              </p>
+                      Purchase Hint
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </>
         )}

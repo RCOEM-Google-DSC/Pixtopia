@@ -32,6 +32,15 @@ export async function GET() {
  *   { action: "updateUrl", url: string }
  */
 export async function POST(request: NextRequest) {
+  // Read body immediately to prevent Turbopack 'Lock broken' error
+  let body;
+  try {
+    body = await request.json();
+  } catch (err) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { action, roundId, url } = body;
+
   // Verify the caller is authenticated
   const supabase = await createClient();
   const {
@@ -46,9 +55,6 @@ export async function POST(request: NextRequest) {
   if (user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
-  const body = await request.json();
-  const { action, roundId, url } = body;
 
   const admin = await createAdminClient();
 

@@ -15,6 +15,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (err) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { points } = body;
+
   const { teamId } = await params;
 
   // Verify caller is authenticated
@@ -25,8 +33,6 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { points } = await request.json();
 
   if (typeof points !== "number" || points < 0) {
     return NextResponse.json({ error: "Invalid points value" }, { status: 400 });

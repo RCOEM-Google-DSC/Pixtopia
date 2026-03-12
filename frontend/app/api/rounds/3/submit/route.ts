@@ -4,15 +4,19 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 const TOTAL_QUESTIONS = 5;
 
 export async function POST(request: NextRequest) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (err) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const supabase = await createClient();
 
-  // Verify session
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
   const { questionOrder, selectedIndex } = body;
   if (questionOrder === undefined || selectedIndex === undefined) {
     return NextResponse.json({ error: "questionOrder and selectedIndex are required" }, { status: 400 });
@@ -20,7 +24,6 @@ export async function POST(request: NextRequest) {
 
   const admin = await createAdminClient();
 
-  // Get team
   const { data: team, error: teamError } = await admin
     .from("teams")
     .select("id, points")
@@ -31,23 +34,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
-  // Get current progress
-  const { data: progress, error: progressError } = await admin
-    .from("team_round_progress")
+  const { data: submission } = await admin
+    .from("submissions")
     .select("*")
     .eq("team_id", team.id)
-    .eq("round_id", "3")
-    .single();
+    .maybeSingle();
 
-  if (progressError || !progress) {
-    return NextResponse.json({ error: "Progress not found" }, { status: 404 });
-  }
+  const round3Sub = submission?.round3 || { answers: {}, hints_per_question: {}, score: 0 };
+  const answers = round3Sub.answers || {};
 
-  if (progress.is_completed) {
+  if (Object.keys(answers).length >= TOTAL_QUESTIONS) {
     return NextResponse.json({ error: "Round already completed" }, { status: 400 });
   }
 
-  // Fetch the question to validate the answer server-side
+  // Timer check
+  const startTimes = round3Sub.question_start_times || {};
+  const startTimeStr = startTimes[String(questionOrder)];
+  if (!startTimeStr) {
+      return NextResponse.json({ error: "Question not started" }, { status: 400 });
+  }
+  const startTime = new Date(startTimeStr).getTime();
+  const now = Date.now();
+  const timeElapsed = (now - startTime) / 1000;
+
   const { data: question, error: questionError } = await admin
     .from("round_3_questions")
     .select("id, question_order, correct_index, points")
@@ -58,17 +67,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Question not found" }, { status: 404 });
   }
 
-  const isCorrect = question.correct_index === selectedIndex;
+  let isCorrect = question.correct_index === selectedIndex;
 
-  if (!isCorrect) {
-    return NextResponse.json({ isCorrect: false, message: "Incorrect answer. Try again!" });
+  if (timeElapsed > 65 || selectedIndex === null) {
+      isCorrect = false;
   }
 
-  const awardedPoints = question.points;
-  const newQuestionsAnswered = (progress.questions_answered ?? 0) + 1;
+  const awardedPoints = isCorrect ? question.points : 0;
+  
+  answers[String(questionOrder)] = selectedIndex ?? -1;
+  const newQuestionsAnswered = Object.keys(answers).length;
   const isRoundComplete = newQuestionsAnswered >= TOTAL_QUESTIONS;
 
-  // 1. Update team points
   const { error: teamUpdateError } = await admin
     .from("teams")
     .update({ points: team.points + awardedPoints })
@@ -78,44 +88,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: teamUpdateError.message }, { status: 500 });
   }
 
-  // 2. Update progress
-  const { error: progressUpdateError } = await admin
-    .from("team_round_progress")
-    .update({
-      questions_answered: newQuestionsAnswered,
-      is_completed: isRoundComplete,
-    })
-    .eq("team_id", team.id)
-    .eq("round_id", "3");
-
-  if (progressUpdateError) {
-    return NextResponse.json({ error: progressUpdateError.message }, { status: 500 });
+  round3Sub.answers = answers;
+  round3Sub.score = (round3Sub.score || 0) + awardedPoints;
+  if (isRoundComplete) {
+    round3Sub.submitted_at = new Date().toISOString();
   }
 
-  // 3. Upsert into submissions table (only on final completion)
-  if (isRoundComplete) {
-    const { error: submissionError } = await admin
-      .from("submissions")
-      .upsert({
-        team_id: team.id,
-        round3: {
-          score: awardedPoints,
-          hints_used: progress.hints_used,
-          points_spent_on_hints: progress.points_spent,
-          submitted_at: new Date().toISOString(),
-        },
-      });
+  let nextStartTimeStr = undefined;
+  if (!isRoundComplete) {
+    if (!round3Sub.question_start_times) round3Sub.question_start_times = {};
+    nextStartTimeStr = new Date().toISOString();
+    round3Sub.question_start_times[String(questionOrder + 1)] = nextStartTimeStr;
+  }
 
-    if (submissionError) {
-      console.warn("⚠️ Could not update submissions record:", submissionError.message);
-    }
+  const payload = {
+    team_id: team.id,
+    ...(submission ?? {}),
+    round3: round3Sub,
+  };
+
+  const { error: upsertErr } = await admin
+    .from("submissions")
+    .upsert(payload, { onConflict: "team_id" });
+
+  if (upsertErr) {
+    console.warn("⚠️ Could not update submissions record:", upsertErr.message);
   }
 
   return NextResponse.json({
-    isCorrect: true,
+    isCorrect,
     awardedPoints,
     newBalance: team.points + awardedPoints,
     questionsAnswered: newQuestionsAnswered,
     isRoundComplete,
+    nextStartTime: nextStartTimeStr,
+    message: isCorrect ? undefined : "Incorrect or timeout.",
   });
 }
+

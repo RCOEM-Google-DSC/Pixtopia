@@ -43,6 +43,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (err) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { roundId, answers, score } = body;
+
   const { teamId } = await params;
 
   const supabase = await createClient();
@@ -52,8 +60,6 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { roundId, answers, score } = await request.json();
 
   if (!roundId || answers === undefined || typeof score !== "number") {
     return NextResponse.json({ error: "roundId, answers, and score are required" }, { status: 400 });
