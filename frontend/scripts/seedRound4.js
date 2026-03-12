@@ -51,27 +51,21 @@ const PLACEHOLDER = (w, h, label) =>
 const round4Puzzles = [
   {
     order: 1,
-    image_labels: ["Mc", "Queen"], 
+    image_labels: ["Mc", "Queen"],
     answer: "McQueen",
     hint: "cars character",
     points: 100,
     localFiles: ["cars.jpg", "cars2.png"],
-    image_urls: [
-      PLACEHOLDER(400, 300, "Mc"),
-      PLACEHOLDER(400, 300, "Queen"),
-    ],
+    image_urls: [PLACEHOLDER(400, 300, "Mc"), PLACEHOLDER(400, 300, "Queen")],
   },
   {
     order: 2,
-    image_labels: ["Woo", "dy"], 
+    image_labels: ["Woo", "dy"],
     answer: "Woody",
     hint: "Toy story character",
     points: 100,
     localFiles: ["toys.jpg", "toys2.webp"],
-    image_urls: [
-      PLACEHOLDER(400, 300, "Woo"),
-      PLACEHOLDER(400, 300, "dy"),
-    ],
+    image_urls: [PLACEHOLDER(400, 300, "Woo"), PLACEHOLDER(400, 300, "dy")],
   },
 ];
 
@@ -144,6 +138,20 @@ async function seed() {
 
   await ensureBucket();
 
+  // Wipe all existing round-4 rows first so stale orders (e.g. 3/4/5 from old
+  // seed runs) never linger in the table.
+  console.log("🗑️   Clearing all existing round-4 questions…");
+  const { data: allExisting } = await supabase
+    .from("questions")
+    .select("id")
+    .eq("round_id", "4");
+  if (allExisting && allExisting.length > 0) {
+    for (const r of allExisting) {
+      await supabase.from("questions").delete().eq("id", r.id);
+    }
+    console.log(`   Deleted ${allExisting.length} old row(s)\n`);
+  }
+
   for (const puzzle of round4Puzzles) {
     console.log(
       `📦  Puzzle ${puzzle.order}: ${puzzle.image_labels.join(" + ")} → ${puzzle.answer}`,
@@ -162,24 +170,7 @@ async function seed() {
       }
     }
 
-    // Delete any existing rows for this puzzle by UUID to avoid PostgREST misinterpreting
-    // the `order` column name as the ORDER BY keyword in DELETE filter URLs.
-    const { data: existingRows } = await supabase
-      .from("questions")
-      .select("id, order")
-      .eq("round_id", "4");
-
-    if (existingRows) {
-      const toDelete = existingRows.filter((r) => r.order === puzzle.order);
-      for (const r of toDelete) {
-        await supabase.from("questions").delete().eq("id", r.id);
-      }
-      if (toDelete.length > 0) {
-        console.log(`   🗑️   Deleted ${toDelete.length} existing row(s) for puzzle ${puzzle.order}`);
-      }
-    }
-
-    // Insert the puzzle into the database
+    // Insert fresh row (all old rows were wiped above)
     const row = {
       round_id: "4",
       order: puzzle.order,
