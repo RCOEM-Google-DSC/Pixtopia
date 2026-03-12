@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Implementation of Round 4 Part A Visual Puzzle with segmented input and incrementing hint costs.**
+- [x] **Track: Implementation of Round 4 Part A Visual Puzzle with segmented input and incrementing hint costs.**
   *Link: [./tracks/round4_part_a_20260312/](./tracks/round4_part_a_20260312/)*
