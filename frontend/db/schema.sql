@@ -15,8 +15,11 @@ CREATE TABLE public.questions (
   options ARRAY,
   correct_index integer NOT NULL DEFAULT 0,
   image_urls ARRAY,
+  video_url text,
   letters ARRAY,
   answer text,
+  hint text,
+  hint_cost integer NOT NULL DEFAULT 10,
   points integer NOT NULL DEFAULT 0,
   CONSTRAINT questions_pkey PRIMARY KEY (id)
 );

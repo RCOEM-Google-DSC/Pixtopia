@@ -19,6 +19,7 @@ To create a highly interactive, real-time competition hub that automates event m
 
 ## Key Features
 - **Interactive UI/UX:** An immersive Pixar-themed interface using Three.js and Framer Motion for high-quality animations.
+- **Video-Based Challenges:** Real-time video clips for trivia and technical puzzles with multiple-choice and segmented input answers.
 - **Integrated Supabase Backend:** Robust backend for authentication, round state management, and real-time database updates.
 - **Automated Scoring/Submissions:** Smooth processing of team submissions with automated scoring and integration with external platforms.
 - **Dynamic Dashboard:** A central hub for teams to view their status, the current round details, and the global leaderboard.

@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
     }
     const question = seen.get(questionOrder) ?? null;
 
-    if (questionsResult.error || !question || !question.answer) {
-      return NextResponse.json({ error: "Puzzle not found" }, { status: 404 });
+    if (questionsResult.error || !question) {
+      return NextResponse.json({ error: "Question not found" }, { status: 404 });
     }
 
     // Fetch existing submission (needs team.id from previous step)
@@ -60,54 +60,91 @@ export async function POST(request: NextRequest) {
 
     const r4 = submission?.round4 || {};
     const hintsKey = `q${questionOrder}_hints_revealed`;
-    const hintsRevealed: number[] = r4[hintsKey] || [];
 
-    if (hintsRevealed.length >= question.answer.length) {
-      return NextResponse.json({ error: "All letters revealed" }, { status: 400 });
+    if (questionOrder >= 4) {
+      // Part B: Text Hint (boolean flag)
+      if (r4[hintsKey]) {
+        return NextResponse.json({ hint: question.hint, alreadyRevealed: true });
+      }
+
+      const cost = question.hint_cost || 10;
+      if (team.points < cost) {
+        return NextResponse.json({ error: "Insufficient points" }, { status: 400 });
+      }
+
+      const updatedRound4 = {
+        ...r4,
+        [hintsKey]: true,
+        points_spent: (r4.points_spent || 0) + cost,
+      };
+
+      const [updateErr, upsertErr] = await Promise.all([
+        admin.from("teams").update({ points: team.points - cost }).eq("id", team.id)
+          .then((r) => r.error),
+        admin.from("submissions").upsert(
+          { team_id: team.id, ...(submission ?? {}), round4: updatedRound4 },
+          { onConflict: "team_id" }
+        ).then((r) => r.error),
+      ]);
+
+      if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+
+      return NextResponse.json({
+        hint: question.hint,
+        cost,
+        newBalance: team.points - cost,
+      });
+    } else {
+      // Part A: Reveal Letter (existing logic)
+      if (!question.answer) return NextResponse.json({ error: "Invalid question data" }, { status: 500 });
+      
+      const hintsRevealed: number[] = r4[hintsKey] || [];
+      if (hintsRevealed.length >= question.answer.length) {
+        return NextResponse.json({ error: "All letters revealed" }, { status: 400 });
+      }
+
+      const cost = 10 * (hintsRevealed.length + 1);
+      if (team.points < cost) {
+        return NextResponse.json({ error: "Insufficient points" }, { status: 400 });
+      }
+
+      // Pick index to reveal — prefer letters not yet typed correctly
+      const allIndices = Array.from({ length: question.answer.length }, (_, i) => i);
+      let available = allIndices.filter((idx) => !hintsRevealed.includes(idx));
+      if (currentAnswer && currentAnswer.length === question.answer.length) {
+        const filtered = available.filter((idx) => currentAnswer[idx] !== question.answer[idx]);
+        if (filtered.length > 0) available = filtered;
+      }
+      const revealedIndex = available[Math.floor(Math.random() * available.length)];
+      const revealedChar = question.answer[revealedIndex];
+
+      const updatedHints = [...hintsRevealed, revealedIndex];
+      const updatedRound4 = {
+        ...r4,
+        [hintsKey]: updatedHints,
+        points_spent: (r4.points_spent || 0) + cost,
+      };
+
+      const [updateErr, upsertErr] = await Promise.all([
+        admin.from("teams").update({ points: team.points - cost }).eq("id", team.id)
+          .then((r) => r.error),
+        admin.from("submissions").upsert(
+          { team_id: team.id, ...(submission ?? {}), round4: updatedRound4 },
+          { onConflict: "team_id" }
+        ).then((r) => r.error),
+      ]);
+
+      if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+
+      return NextResponse.json({
+        revealedIndex,
+        revealedChar,
+        cost,
+        newBalance: team.points - cost,
+      });
     }
-
-    const cost = 10 * (hintsRevealed.length + 1);
-
-    if (team.points < cost) {
-      return NextResponse.json({ error: "Insufficient points" }, { status: 400 });
-    }
-
-    // Pick index to reveal — prefer letters not yet typed correctly
-    const allIndices = Array.from({ length: question.answer.length }, (_, i) => i);
-    let available = allIndices.filter((idx) => !hintsRevealed.includes(idx));
-    if (currentAnswer && currentAnswer.length === question.answer.length) {
-      const filtered = available.filter((idx) => currentAnswer[idx] !== question.answer[idx]);
-      if (filtered.length > 0) available = filtered;
-    }
-    const revealedIndex = available[Math.floor(Math.random() * available.length)];
-    const revealedChar = question.answer[revealedIndex];
-
-    const updatedHints = [...hintsRevealed, revealedIndex];
-    const updatedRound4 = {
-      ...r4,
-      [hintsKey]: updatedHints,
-      points_spent: (r4.points_spent || 0) + cost,
-    };
-
-    // Deduct points and save submission in parallel
-    const [updateErr, upsertErr] = await Promise.all([
-      admin.from("teams").update({ points: team.points - cost }).eq("id", team.id)
-        .then((r) => r.error),
-      admin.from("submissions").upsert(
-        { team_id: team.id, ...(submission ?? {}), round4: updatedRound4 },
-        { onConflict: "team_id" }
-      ).then((r) => r.error),
-    ]);
-
-    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
-    if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
-
-    return NextResponse.json({
-      revealedIndex,
-      revealedChar,
-      cost,
-      newBalance: team.points - cost,
-    });
   } catch (err: any) {
     console.error("Round4 hint error:", err);
     return NextResponse.json({ error: err.message || "Unknown error" }, { status: 500 });

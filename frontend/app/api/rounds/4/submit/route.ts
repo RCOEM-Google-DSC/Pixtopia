@@ -10,14 +10,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { answer, questionOrder = 1 } = body;
-    if (!answer) {
-      return NextResponse.json(
-        { error: "Answer is required" },
-        { status: 400 },
-      );
+    const { answer, answerIndex, questionOrder = 1 } = body;
+    if (questionOrder < 1 || questionOrder > 3 && (answerIndex === undefined)) {
+        if (!answer && answerIndex === undefined) {
+          return NextResponse.json(
+            { error: "Answer is required" },
+            { status: 400 },
+          );
+        }
     }
-    if (questionOrder < 1 || questionOrder > 3) {
+    if (questionOrder < 1 || questionOrder > 6) {
       return NextResponse.json(
         { error: "Invalid questionOrder" },
         { status: 400 },
@@ -46,30 +48,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Fetch Round 4 Part 1 puzzle.
-    // NOTE: "order" is a reserved PostgREST keyword — filter in JS instead.
-    const { data: questions, error: questionError } = await admin
+    // Optimized: Fetch ONLY the specific question needed
+    const { data: question, error: questionError } = await admin
       .from("questions")
       .select("*")
       .eq("round_id", "4")
-      .order("id", { ascending: false });
+      .eq("order", questionOrder)
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    // Deduplicate questions by order the same way the state route does
-    const seen = new Map<number, any>();
-    for (const q of questions ?? []) {
-      const existing = seen.get(q.order);
-      if (!existing || q.id > existing.id) seen.set(q.order, q);
+    if (questionError || !question) {
+      return NextResponse.json({ error: "Question not found" }, { status: 404 });
     }
 
-    const question = seen.get(questionOrder) ?? null;
-
-    if (questionError || !question || !question.answer) {
-      return NextResponse.json({ error: "Puzzle not found" }, { status: 404 });
-    }
-
-    // Validate answer (case insensitive, trimmed)
-    if (answer.trim().toUpperCase() !== question.answer.toUpperCase()) {
-      return NextResponse.json({ error: "Incorrect answer" }, { status: 400 });
+    // Validate answer based on question type
+    if (questionOrder >= 4) {
+      // Part B: MCQ
+      if (answerIndex === undefined) {
+        return NextResponse.json({ error: "Answer index is required" }, { status: 400 });
+      }
+      if (Number(answerIndex) !== question.correct_index) {
+        return NextResponse.json({ error: "Incorrect answer" }, { status: 400 });
+      }
+    } else {
+      // Part A: Visual Puzzle
+      if (!answer) {
+        return NextResponse.json({ error: "Answer is required" }, { status: 400 });
+      }
+      if (answer.trim().toUpperCase() !== (question.answer || "").toUpperCase()) {
+        return NextResponse.json({ error: "Incorrect answer" }, { status: 400 });
+      }
     }
 
     // Fetch existing submission
@@ -92,12 +101,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // All done when every seeded question is completed
-    const totalQuestions = seen.size;
-    const allDone = Array.from(
-      { length: totalQuestions },
-      (_, i) => i + 1,
-    ).every((n) => (n === questionOrder ? true : !!r4[`q${n}_completed`]));
+    // Check if all questions (1-6) are completed
+    const allDone = [1, 2, 3, 4, 5, 6].every((n) => 
+      n === questionOrder ? true : !!r4[`q${n}_completed`]
+    );
 
     const updatedRound4 = {
       ...r4,

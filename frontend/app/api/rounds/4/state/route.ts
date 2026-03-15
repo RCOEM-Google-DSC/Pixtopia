@@ -25,13 +25,13 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Fetch all round-4 questions and filter in JS
-    // (PostgREST treats "order" as a reserved sort keyword in filter URLs)
+    // Optimized: Fetch ONLY necessary columns and limit to round 4
     const { data: allQuestions, error: questionError } = await admin
       .from("questions")
-      .select("*")
+      .select("id, order, question, options, image_urls, video_url, answer, points")
       .eq("round_id", "4")
-      .order("id", { ascending: true });
+      .order("order", { ascending: true })
+      .order("id", { ascending: false });
 
     if (questionError) {
       return NextResponse.json(
@@ -40,17 +40,14 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    // Deduplicate: if multiple rows share the same `order` (from re-runs of the
-    // seed script), keep only the most-recently inserted one (highest id sorts last
-    // when UUIDs are time-based; fall back to array position).
+    // Deduplicate in JS (one row per order)
     const seen = new Map<number, any>();
     for (const q of allQuestions ?? []) {
-      const existing = seen.get(q.order);
-      if (!existing || q.id > existing.id) seen.set(q.order, q);
+      if (!seen.has(q.order)) seen.set(q.order, q);
     }
     const uniqueQuestions = Array.from(seen.values())
       .sort((a, b) => a.order - b.order)
-      .slice(0, 3); // hard cap at 3 questions max
+      .slice(0, 6);
 
     const { data: submission } = await admin
       .from("submissions")
@@ -60,8 +57,22 @@ export async function GET(_request: NextRequest) {
 
     const r4 = submission?.round4 || {};
 
-    // Build puzzle payload per question, exposing only revealed characters
+    // Build puzzle payload per question, exposing only revealed characters for Part A
+    // and video/options for Part B.
     const puzzles = uniqueQuestions.map((q: any) => {
+      if (q.order >= 4) {
+        // Part B: Video MCQ
+        return {
+          order: q.order,
+          question: q.question || "",
+          video_url: q.video_url || "",
+          options: q.options || [],
+          points: q.points || 0,
+          type: "mcq"
+        };
+      }
+      
+      // Part A: Visual Puzzle
       const hints: number[] = r4[`q${q.order}_hints_revealed`] || [];
       const revealedLetters = hints.map((idx: number) => ({
         index: idx,
@@ -72,21 +83,24 @@ export async function GET(_request: NextRequest) {
         image_urls: q.image_urls || [],
         answer_length: q.answer ? q.answer.length : 0,
         revealed_letters: revealedLetters,
+        type: "rebus"
       };
     });
 
+    const roundState: any = {
+      is_completed: r4.is_completed || false,
+      points_spent: r4.points_spent || 0,
+    };
+
+    // Dynamically add qN_completed and qN_hints_revealed for all 6 questions
+    for (let i = 1; i <= 6; i++) {
+      roundState[`q${i}_completed`] = r4[`q${i}_completed`] || false;
+      roundState[`q${i}_hints_revealed`] = r4[`q${i}_hints_revealed`] || (i >= 4 ? false : []); // Boolean for Part B, array for Part A
+    }
+
     return NextResponse.json({
       puzzles,
-      roundState: {
-        q1_completed: r4.q1_completed || false,
-        q2_completed: r4.q2_completed || false,
-        q3_completed: r4.q3_completed || false,
-        q1_hints_revealed: r4.q1_hints_revealed || [],
-        q2_hints_revealed: r4.q2_hints_revealed || [],
-        q3_hints_revealed: r4.q3_hints_revealed || [],
-        is_completed: r4.is_completed || false,
-        points_spent: r4.points_spent || 0,
-      },
+      roundState,
       teamPoints: team.points,
     });
   } catch (err: any) {

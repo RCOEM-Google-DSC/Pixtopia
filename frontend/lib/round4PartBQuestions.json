@@ -1,0 +1,32 @@
+[
+  {
+    "order": 4,
+    "question": "Which Pixar movie is this scene from?",
+    "options": ["Monsters, Inc.", "Toy Story", "Cars", "Inside Out"],
+    "correct_index": 1,
+    "hint": "This famous scene shows Buzz attempting to fly but actually just 'falling with style.'",
+    "hint_cost": 15,
+    "points": 100,
+    "video_url": "https://media.tenor.com/images/73eb3ecce00be06606666ec606060606/tenor.gif"
+  },
+  {
+    "order": 5,
+    "question": "What is the name of this character?",
+    "options": ["Dory", "Marlin", "Nemo", "Bruce"],
+    "correct_index": 2,
+    "hint": "The orange-and-white clownfish protagonist from Pixar’s ocean adventure",
+    "hint_cost": 20,
+    "points": 100,
+    "video_url": "https://media.tenor.com/images/a6666666666666666666666666666666/tenor.gif"
+  },
+  {
+    "order": 6,
+    "question": "This character appears in which Pixar movie?",
+    "options": ["Luca", "Finding Nemo", "Ratatouille", "Coco"],
+    "correct_index": 1,
+    "hint": "Dory is the forgetful blue tang who repeats the phrase “just keep swimming.”",
+    "hint_cost": 25,
+    "points": 100,
+    "video_url": "https://media.tenor.com/images/b6666666666666666666666666666666/tenor.gif"
+  }
+]
