@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Racing+Sans+One&family=Roboto:wght@400;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -131,4 +132,179 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ─── Racing / Login 3D Animation Styles ─────────────────────── */
+
+.racing-font {
+  font-family: 'Racing Sans One', cursive;
+}
+
+.btn-race {
+  background: linear-gradient(90deg, #e11d48 0%, #f59e0b 100%);
+  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
+}
+
+/* Speed lines */
+.road-line {
+  position: absolute;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  width: 300px;
+  border-radius: 100px;
+  z-index: 5;
+  opacity: 0;
+  animation: speedMove linear infinite;
+}
+
+@keyframes speedMove {
+  0%   { transform: translateX(120vw);  opacity: 0; }
+  50%  { opacity: 1; }
+  100% { transform: translateX(-120vw); opacity: 0; }
+}
+
+/* Login card */
+.login-card {
+  background: #0f0f0f;
+  border: 1px solid #333;
+  border-top: 4px solid #e11d48;
+  padding: 2.5rem;
+  border-radius: 0.75rem;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 20px 50px rgba(225, 29, 72, 0.3);
+}
+
+.login-title-number {
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.05em;
+  font-style: italic;
+  color: #e11d48;
+}
+
+.login-title-text {
+  font-size: 1.875rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.login-subtitle {
+  color: #6b7280;
+  text-align: center;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.login-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-left: 0.25rem;
+}
+
+.login-input {
+  width: 100%;
+  background: #18181b;
+  border: 1px solid #27272a;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  color: #fff;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-input:focus {
+  border-color: #e11d48;
+  box-shadow: 0 0 0 1px #e11d48;
+}
+
+.login-input::placeholder {
+  color: #52525b;
+}
+
+.login-button {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.login-button:hover {
+  transform: scale(1.02);
+}
+
+.login-button:active {
+  transform: scale(0.98);
+}
+
+.login-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-error {
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #f87171;
+  text-align: center;
+}
+
+.login-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: #6b7280;
+  padding: 0 0.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+}
+
+.login-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s;
+}
+
+.login-link--red:hover {
+  color: #e11d48;
+}
+
+.login-link--amber:hover {
+  color: #f59e0b;
 }
