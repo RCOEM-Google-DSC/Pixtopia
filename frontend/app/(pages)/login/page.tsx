@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, Environment, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
@@ -14,13 +14,24 @@ function McQueen({
   isReady,
   isExiting,
   carRef,
+  onModelLoaded,
 }: {
   isDrifting: boolean;
   isReady: boolean;
   isExiting: boolean;
   carRef: React.RefObject<THREE.Group | null>;
+  onModelLoaded: () => void;
 }) {
   const { nodes } = useGLTF("/lightning_mcqueen_3d_model.glb");
+
+  // Signal that the model has loaded
+  const hasSignaled = useRef(false);
+  useEffect(() => {
+    if (nodes && !hasSignaled.current) {
+      hasSignaled.current = true;
+      onModelLoaded();
+    }
+  }, [nodes, onModelLoaded]);
 
   useFrame((_state, delta) => {
     if (!carRef.current) return;
@@ -36,11 +47,13 @@ function McQueen({
       carRef.current.rotation.z = THREE.MathUtils.damp(carRef.current.rotation.z, 0.2, 2.5, delta);
       carRef.current.rotation.x = THREE.MathUtils.damp(carRef.current.rotation.x, 0.1, 2.5, delta);
     } else if (isExiting) {
-      carRef.current.position.x = THREE.MathUtils.damp(carRef.current.position.x, -25, 2, delta);
-      carRef.current.position.z = THREE.MathUtils.damp(carRef.current.position.z, 5, 1.5, delta);
-      carRef.current.rotation.y = THREE.MathUtils.damp(carRef.current.rotation.y, -1.8, 2, delta);
+      // Continue drift momentum — accelerate off-screen to the left, pulling away from camera
+      carRef.current.position.x = THREE.MathUtils.damp(carRef.current.position.x, -30, 3.5, delta);
+      carRef.current.position.y = THREE.MathUtils.damp(carRef.current.position.y, -1.2, 2, delta);
+      carRef.current.position.z = THREE.MathUtils.damp(carRef.current.position.z, 0, 2.5, delta);
+      carRef.current.rotation.y = THREE.MathUtils.damp(carRef.current.rotation.y, -1.2, 1.8, delta);
       carRef.current.rotation.x = THREE.MathUtils.damp(carRef.current.rotation.x, 0.05, 2, delta);
-      carRef.current.rotation.z = THREE.MathUtils.damp(carRef.current.rotation.z, 0, 2, delta);
+      carRef.current.rotation.z = THREE.MathUtils.damp(carRef.current.rotation.z, 0.1, 2, delta);
     } else {
       carRef.current.position.x = THREE.MathUtils.damp(carRef.current.position.x, 0, 2, delta);
       carRef.current.position.y = THREE.MathUtils.damp(carRef.current.position.y, -1, 2, delta);
@@ -197,6 +210,7 @@ export default function LoginPage() {
     "initial"
   );
   const carRef = useRef<THREE.Group>(null);
+  const [modelLoaded, setModelLoaded] = useState(false);
 
   // Auth state
   const [email, setEmail] = useState("");
@@ -205,19 +219,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Animation sequence timers — matches the original exactly
+  const handleModelLoaded = useCallback(() => {
+    setModelLoaded(true);
+  }, []);
+
+  // Animation sequence timers — only start AFTER the 3D model has loaded
   useEffect(() => {
+    if (!modelLoaded) return;
+
     const t1 = setTimeout(() => setAnimState("zoomin"), 400);
     const t2 = setTimeout(() => setAnimState("drift"), 2200);
     const t3 = setTimeout(() => setAnimState("exit"), 4000);
-    const t4 = setTimeout(() => setAnimState("login"), 4200);
+    const t4 = setTimeout(() => setAnimState("login"), 5000);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
       clearTimeout(t4);
     };
-  }, []);
+  }, [modelLoaded]);
 
   const isDrifting = animState === "drift";
   const isExiting = animState === "exit" || animState === "login";
@@ -269,8 +289,14 @@ export default function LoginPage() {
       />
       <SpeedLines />
 
-      {/* 3D Canvas */}
-      <div className="absolute inset-0 z-10 pointer-events-none">
+      {/* 3D Canvas — fades in once model is loaded to avoid teleportation pop */}
+      <div
+        className="absolute inset-0 z-10 pointer-events-none"
+        style={{
+          opacity: modelLoaded ? 1 : 0,
+          transition: "opacity 0.8s ease-in",
+        }}
+      >
         <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 1.5]} performance={{ min: 0.5 }}>
           <ambientLight intensity={1.5} />
           <directionalLight position={[10, 10, 10]} intensity={2} />
@@ -278,7 +304,7 @@ export default function LoginPage() {
 
           <React.Suspense fallback={null}>
             <CameraRig isDrifting={isDrifting} isExiting={isExiting} />
-            <McQueen isDrifting={isDrifting} isReady={isReady} isExiting={isExiting} carRef={carRef} />
+            <McQueen isDrifting={isDrifting} isReady={isReady} isExiting={isExiting} carRef={carRef} onModelLoaded={handleModelLoaded} />
             <Smoke isDrifting={isDrifting} carRef={carRef} />
             <Environment preset="city" />
             <ContactShadows
