@@ -49,7 +49,7 @@ export default function Hero() {
                 <div
                     className="absolute inset-0 w-full h-full bg-cover bg-center z-0 opacity-40"
                     style={{
-                        backgroundImage: `url(/hero/bg.jpg)`,
+                        backgroundImage: `url(/hero/bg.png)`,
                         mixBlendMode: "luminosity",
                     }}
                 />
@@ -104,7 +104,8 @@ export default function Hero() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 1.5, ease: "easeInOut" }}
-                            className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                            className="absolute inset-0 z-10 flex items-center justify-center"
+                            style={{ backgroundImage: 'url(/hero/bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
                         >
                             <div className="relative w-full h-full overflow-hidden">
                                 <video
