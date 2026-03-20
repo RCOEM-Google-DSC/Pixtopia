@@ -50,10 +50,13 @@ export default function Round3Page() {
   const selectedOptionRef = useRef<number | null>(null);
   const [answerLocked, setAnswerLocked] = useState(false);
   const answerLockedRef = useRef(false);
+  const currentQuestionIndexRef = useRef(0);
   // currentQuestionIndex is derived from progress.questions_answered on load,
   // then advanced locally on correct answers without re-fetching.
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
+  const timerDoneRef = useRef(false);
   const [roundScore, setRoundScore] = useState(0);
   const [teamPoints, setTeamPoints] = useState(0);
 
@@ -106,42 +109,57 @@ export default function Round3Page() {
   useEffect(() => {
     answerLockedRef.current = answerLocked;
   }, [answerLocked]);
+  useEffect(() => {
+    currentQuestionIndexRef.current = currentQuestionIndex;
+  }, [currentQuestionIndex]);
 
+  // Set startTimestamp when question changes and we have a start time from progress
   useEffect(() => {
     if (!currentQuestion || !progress?.question_start_times) return;
     const startTimeStr = progress.question_start_times[currentQuestion.question_order];
     if (!startTimeStr) return;
-    
-    const startTime = new Date(startTimeStr).getTime();
-    let timerDone = false;
-    
+    const ts = new Date(startTimeStr).getTime();
+    if (ts !== startTimestamp) {
+      setStartTimestamp(ts);
+      timerDoneRef.current = false;
+    }
+  }, [currentQuestionIndex, progress?.question_start_times]);
+
+  // Timer effect — depends only on startTimestamp, NOT on progress
+  useEffect(() => {
+    if (startTimestamp === null) return;
+
     const tick = () => {
       const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000);
+      const elapsed = Math.floor((now - startTimestamp) / 1000);
       const remaining = Math.max(0, 60 - elapsed);
       setTimeLeft(remaining);
-      
-      if (remaining === 0 && !timerDone) {
-        timerDone = true;
-        handleTimerExpired(currentQuestion.question_order);
+
+      if (remaining === 0 && !timerDoneRef.current) {
+        timerDoneRef.current = true;
+        handleTimerExpired();
       }
     };
-    
+
     tick();
     const interval = setInterval(tick, 1000);
-    
+
     return () => clearInterval(interval);
-  }, [currentQuestion, progress]);
+  }, [startTimestamp]);
 
   // When timer expires: if answer not locked yet, auto-submit. Then advance or show summary.
-  const handleTimerExpired = async (questionOrder: number) => {
+  const handleTimerExpired = async () => {
     const alreadyLocked = answerLockedRef.current;
+    const qIndex = currentQuestionIndexRef.current;
+    const question = questions[qIndex];
+    if (!question) return;
+    const questionOrder = question.question_order;
 
     if (!alreadyLocked) {
       // Auto-submit whatever is selected (could be null)
       const currentSelection = selectedOptionRef.current;
       try {
-        const res = await fetch("/api/rounds/3/submit", {
+        await fetch("/api/rounds/3/submit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -149,35 +167,13 @@ export default function Round3Page() {
             selectedIndex: currentSelection,
           }),
         });
-        const data = await res.json();
-        if (!res.ok) return;
-
-        if (data.isRoundComplete) {
-          // Last question — show summary now
-          fetchState();
-          setProgress((prev) =>
-            prev ? { ...prev, questions_answered: data.questionsAnswered, is_completed: true } : null
-          );
-          return;
-        }
-        // Store the next start time before advancing
-        setProgress((prev) =>
-          prev
-            ? {
-                ...prev,
-                questions_answered: data.questionsAnswered,
-                question_start_times: {
-                  ...prev.question_start_times,
-                  [questionOrder + 1]: data.nextStartTime,
-                }
-              }
-            : null
-        );
       } catch {
-        // ignore
+        // ignore — still advance regardless
       }
-    } else if (questionOrder >= TOTAL_QUESTIONS) {
-      // Answer was already locked for the last question — now show summary
+    }
+
+    // Check if this was the last question
+    if (questionOrder >= TOTAL_QUESTIONS) {
       fetchState();
       setProgress((prev) =>
         prev ? { ...prev, is_completed: true } : null
@@ -185,18 +181,10 @@ export default function Round3Page() {
       return;
     }
 
-    // Advance to next question — always set start time to NOW so timer starts fresh at 60
-    const freshStartTime = new Date().toISOString();
-    setProgress((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        question_start_times: {
-          ...prev.question_start_times,
-          [questionOrder + 1]: freshStartTime,
-        }
-      };
-    });
+    // Advance to next question — set start time to NOW so timer starts fresh at 60
+    const freshStart = Date.now();
+    setStartTimestamp(freshStart);
+    timerDoneRef.current = false;
     setCurrentQuestionIndex((i) => i + 1);
     setSelectedOption(null);
     setAnswerLocked(false);
@@ -205,6 +193,8 @@ export default function Round3Page() {
   // Manual submit — locks in the answer but does NOT advance to next question
   const handleSubmit = async () => {
     if (selectedOption === null || !currentQuestion || submitting || answerLocked) return;
+    if (timeLeft !== null && timeLeft <= 0) return; // Don't allow submit at 0 seconds
+    const submitForIndex = currentQuestionIndex;
     setSubmitting(true);
     try {
       const res = await fetch("/api/rounds/3/submit", {
@@ -218,24 +208,18 @@ export default function Round3Page() {
       const data = await res.json();
       if (!res.ok) return;
 
-      // Mark answer as locked — stay on the same question until timer expires
+      // Only apply lock if we're still on the same question (timer hasn't advanced us)
+      if (currentQuestionIndexRef.current !== submitForIndex) return;
+
       setAnswerLocked(true);
 
       if (!data.isRoundComplete) {
-        // Only update questions_answered — do NOT store nextStartTime from backend
-        // because the timer hasn't expired yet. The correct start time will be
-        // set in handleTimerExpired when we actually advance.
         setProgress((prev) =>
           prev
-            ? {
-                ...prev,
-                questions_answered: data.questionsAnswered,
-              }
+            ? { ...prev, questions_answered: data.questionsAnswered }
             : null
         );
       }
-      // If isRoundComplete (last question), do nothing extra — just stay locked.
-      // handleTimerExpired will show the summary when the timer runs out.
     } catch {
       // ignore
     } finally {
@@ -475,7 +459,7 @@ export default function Round3Page() {
                 <>
                   <Button
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-5 text-sm tracking-widest font-black uppercase rounded-xl transition-all hover:scale-105 disabled:opacity-50"
-                    disabled={selectedOption === null || submitting}
+                    disabled={selectedOption === null || submitting || (timeLeft !== null && timeLeft <= 0)}
                     onClick={handleSubmit}
                   >
                     {submitting ? "Submitting..." : "Submit Answer"}
