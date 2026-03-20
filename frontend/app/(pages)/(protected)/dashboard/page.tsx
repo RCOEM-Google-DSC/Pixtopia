@@ -12,11 +12,11 @@ import { Trophy, RefreshCw } from "lucide-react";
 import svgPaths from "@/lib/cardSvgPaths";
 
 /* ─── card image paths (from card repo assets) ─── */
-const imgPngwingCom4 = "/cards/9bc7db3bd914f0d8bf0b2bb51db2242380d4e7f5.png";
-const imgPngwingCom142 = "/cards/be91208fc6bdfc48db6ed7c45c041b78e4e5f9a9.png";
-const imgPngwingCom23 = "/cards/ea42bb65183c8f5976e5c160634be116bc3f0767.png";
-const imgPngwingCom20260304T2308007452 = "/cards/38e6e07d374b9f58be5bdfcefd501c6b71c13013.png";
-const imgPngwingCom20260304T2316341382 = "/cards/d1e12bc1a87f967bbe65daaa6980197361e8c340.png";
+const imgPngwingCom4 = "/cards/card-1.png";
+const imgPngwingCom142 = "/cards/card-2.png";
+const imgPngwingCom23 = "/cards/card-3.png";
+const imgPngwingCom20260304T2308007452 = "/cards/card-4.png";
+const imgPngwingCom20260304T2316341382 = "/cards/card-5.png";
 
 /* ─── round metadata ─── */
 const ROUNDS = [

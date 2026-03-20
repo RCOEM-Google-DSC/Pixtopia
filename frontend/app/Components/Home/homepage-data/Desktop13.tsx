@@ -4,13 +4,13 @@ import clsx from "clsx";
 import svgPaths from "./svg-4gscvfim9a";
 import { imgGroup } from "./svg-b4aqe";
 
-const imgPngwingCom3 = "/homepage/9bc7db3bd914f0d8bf0b2bb51db2242380d4e7f5.png";
-const imgPngwingCom482 = "/homepage/27b09a62d868cf20fd5be9dc6a56c85e6ca034ba.png";
-const imgPngwingCom20260304T2319486962 = "/homepage/972e897836aa25f1aacd7dbaaf6d56300f50f444.png";
-const imgPngwingCom20260304T2313505223 = "/homepage/7221df327dffe93220e48ca6b8d9f187edced94d.png";
-const imgImage13 = "/homepage/15fff29eb3cc3a732e9a1dae418b4058b8dac1a4.png";
-const imgPngwingCom682 = "/homepage/a8927ea34566836f86a4af97028007bc14c30a6e.png";
-const img941A252Ec6E4082Af60F064Bdf0757303 = "/homepage/116392838ac4897da82a17cb54929184e8aae729.png";
+const imgPngwingCom3 = "/homepage/char-1.png";
+const imgPngwingCom482 = "/homepage/char-2.png";
+const imgPngwingCom20260304T2319486962 = "/homepage/char-3.png";
+const imgPngwingCom20260304T2313505223 = "/homepage/char-4.png";
+const imgImage13 = "/homepage/char-5.png";
+const imgPngwingCom682 = "/homepage/char-6.png";
+const img941A252Ec6E4082Af60F064Bdf0757303 = "/homepage/char-7.png";
 type Desktop13Helper7Props = {
   additionalClassNames?: string;
 };
@@ -484,7 +484,7 @@ export default function Desktop() {
         <p className="leading-[normal] mb-0 text-[10px]">&nbsp;</p>
         <Desktop13Helper2 text="TRAITS" text1=": STRONG, UNITED, RESILIENT" />
       </div>
-      <p className="absolute font-['Bebas_Neue:Regular',sans-serif] leading-[normal] left-[94px] not-italic text-[76px] text-black top-[1046px] w-[303px]">PARR FAMILY</p>
+      <p className="absolute font-['Bebas_Neue:Regular',sans-serif] leading-[normal] left-[94px] not-italic text-[76px] text-black top-[1046px] whitespace-nowrap">PARR FAMILY</p>
       <div className="absolute h-[1543px] left-[-2px] top-[4298px] w-[1435px]">
         <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 1435 1543">
           <path d="M0 0H1435V1543H0V0Z" fill="var(--fill-0, #0F0F0F)" id="Rectangle 82" />
@@ -537,9 +537,9 @@ export default function Desktop() {
         </div>
       </div>
       <div className="absolute h-[855px] left-[107px] rounded-[35px] top-[4537px] w-[1217px] overflow-hidden">
-        <div className="absolute h-[1415.957px] left-[285.42px] top-[-248.98px] w-[1116.167px]" data-name="pngwing.com - 2026-03-04T231350.522 3">
+        <div className="absolute h-[1415.957px] left-[380px] top-[-320px] w-[1116.167px]" data-name="pngwing.com - 2026-03-04T231350.522 3">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <img alt="" className="absolute h-[59.04%] left-[14.85%] max-w-none top-[19%] w-[66.67%]" src={imgPngwingCom20260304T2313505223} />
+            <img alt="" className="absolute h-[65%] left-[10%] max-w-none top-[16%] w-[75%]" src={imgPngwingCom20260304T2313505223} />
           </div>
         </div>
         <div className="absolute inset-0 rounded-[35px] bg-[rgba(0,0,0,0.2)]" />
@@ -837,30 +837,30 @@ export default function Desktop() {
           </g>
         </svg>
       </div>
-      <Desktop13Helper7 additionalClassNames="inset-[99.2%_54.28%_0.41%_44.11%]">
-        <path d={svgPaths.p2f432d80} fill="var(--fill-0, white)" id="Vector" />
-      </Desktop13Helper7>
-      <div className="absolute inset-[99.21%_46.98%_0.41%_51.54%]" data-name="Vector">
+      <a href="https://www.instagram.com/gdg_rbu" target="_blank" rel="noopener noreferrer" className="absolute inset-[99.2%_54.28%_0.41%_44.11%] z-10">
+        <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 23 23">
+          <path d={svgPaths.p2f432d80} fill="var(--fill-0, white)" id="Vector" />
+        </svg>
+      </a>
+      <a href="https://www.linkedin.com/company/gdg-rbu" target="_blank" rel="noopener noreferrer" className="absolute inset-[99.21%_46.98%_0.41%_51.54%] z-10" data-name="Vector">
         <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 21 22">
           <path d={svgPaths.p3277cf00} fill="var(--fill-0, white)" id="Vector" />
         </svg>
-      </div>
-      <div className="absolute inset-[99.26%_39.69%_0.46%_58.91%]" data-name="Vector">
+      </a>
+      <a href="mailto:gdsc@rknec.edu" className="absolute inset-[99.26%_39.69%_0.46%_58.91%] z-10" data-name="Vector">
         <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 16">
           <path d={svgPaths.p4ed4080} fill="var(--fill-0, white)" id="Vector" />
         </svg>
-      </div>
-      <div className="absolute contents inset-[99.22%_61.25%_0.41%_37.24%]" data-name="Group">
-        <div className="absolute contents inset-[99.22%_61.25%_0.41%_37.24%]" data-name="Clip path group">
-          <div className="absolute inset-[99.23%_61.25%_0.43%_37.24%] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[0px_-1.013px] mask-size-[21.634px_21.634px]" data-name="Group" style={{ maskImage: `url('${imgGroup}')` }}>
-            <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 21.6337 19.6063">
-              <g id="Group">
-                <path d={svgPaths.p3a544280} fill="var(--fill-0, white)" id="Vector" />
-              </g>
-            </svg>
-          </div>
+      </a>
+      <a href="https://x.com/gdsc_rcoem" target="_blank" rel="noopener noreferrer" className="absolute inset-[99.23%_61.25%_0.43%_37.24%] z-10 block" data-name="Group">
+        <div className="absolute inset-0 mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[0px_-1.013px] mask-size-[21.634px_21.634px]" style={{ maskImage: `url('${imgGroup}')` }}>
+          <svg className="absolute block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 21.6337 19.6063">
+            <g id="Group">
+              <path d={svgPaths.p3a544280} fill="var(--fill-0, white)" id="Vector" />
+            </g>
+          </svg>
         </div>
-      </div>
+      </a>
       <p className="-translate-x-1/2 absolute font-['HvDTrial_Brandon_Grotesque:Medium',sans-serif] leading-[normal] left-[695px] not-italic text-[17px] text-center text-white top-[5737px] tracking-[1.7px] whitespace-nowrap">MEET US ON WWW.GDGRBU.TECH</p>
     </div>
   );
