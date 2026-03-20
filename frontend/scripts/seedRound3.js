@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '../.env.local' });
+require('dotenv').config({ path: '../.env' });
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
@@ -73,42 +73,82 @@ async function uploadImageForOption(questionOrder, optionIndex) {
 const round3Questions = [
   {
     question_order: 1,
-    question: "This character is a legendary racer who learns that there's more to life than just winning. Who is he?",
+    question: "I felt replaced when a new toy arrived.",
     image_urls: ["", "", "", ""],
-    correct_index: 0,
-    hints: ["He's a bright red race car.", "His catchphrase is 'Kachow!'"],
+    correct_index: 1,
+    hints: ["I once organized a toy rescue mission."],
     points: 100
   },
   {
     question_order: 2,
-    question: "This small robot was designed to clean up Earth but ended up finding love in space. What's his name?",
+    question: "I live in a dentist’s aquarium and try to escape often.",
     image_urls: ["", "", "", ""],
-    correct_index: 1,
-    hints: ["He loves collecting trinkets like sporks.", "He has a pet cockroach."],
+    correct_index: 3,
+    hints: ["I am the leader of the tank gang."],
     points: 100
   },
   {
     question_order: 3,
-    question: "This chef might be a rat, but he's the best cook in Paris. What's his name?",
+    question: "I lost a big race because of my pride",
     image_urls: ["", "", "", ""],
     correct_index: 1,
-    hints: ["He controls a human by pulling his hair.", "His idol is Gusteau."],
+    hints: ["A small desert town changed me"],
     points: 100
   },
   {
     question_order: 4,
-    question: "This 'scary' monster is actually a big softie who accidentally brings a human child into the monster world. Who is he?",
+    question: "I secretly followed a signal meant for someone else and ended up on a dangerous island.",
     image_urls: ["", "", "", ""],
     correct_index: 2,
-    hints: ["He has blue fur with purple spots.", "His best friend is a one-eyed green monster."],
+    hints: ["I used a jet and contacted my children before things escalated."],
     points: 100
   },
   {
     question_order: 5,
-    question: "This toy cowboy is Andy's favorite and always looks out for his friends. Who is he?",
+    question: "I learned cooking by watching a famous chef on TV.",
     image_urls: ["", "", "", ""],
     correct_index: 0,
-    hints: ["There's a snake in his boot!", "He has a pull-string on his back."],
+    hints: ["I hide under someone’s hat to guide them."],
+    points: 100
+  },
+    {
+    question_order: 6,
+    question: "I spend my time cleaning up messes left by others.",
+    image_urls: ["", "", "", ""],
+    correct_index: 3,
+    hints: ["I repeatedly say one word that sounds like my name."],
+    points: 100
+  },
+  {
+    question_order: 7,
+    question: "I was admired as a hero before becoming an enemy.",
+    image_urls: ["", "", "", ""],
+    correct_index: 1,
+    hints: ["My obsession led me to chase something others thought was a myth."],
+    points: 100
+  },
+  {
+    question_order: 8,
+    question: "I once felt abandoned and was afraid of being left behind again.",
+    image_urls: ["", "", "", ""],
+    correct_index: 3,
+    hints: ["A song about “when somebody loved me” tells my story."],
+    points: 100
+  },
+  {
+    question_order: 9,
+    question: "I helped search for a lost clownfish.",
+    image_urls: ["", "", "", ""],
+    correct_index: 1,
+    hints: ["I forgot almost everything very quickly"],
+    points: 100
+  },
+  {
+    question_order: 10,
+    question: "I may look broken, but I know every secret of my town.",
+    image_urls: ["", "", "", ""],
+    correct_index: 0,
+    hints: ["I once took part in a spy adventure way beyond my usual life."],
     points: 100
   }
 ];

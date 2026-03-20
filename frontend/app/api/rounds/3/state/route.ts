@@ -43,13 +43,13 @@ export async function GET(_request: NextRequest) {
     const answers = r3.answers || {};
     const hintsPerQ = r3.hints_per_question || {};
     const questionsAnswered = Object.keys(answers).length;
-    const isCompleted = questionsAnswered >= 5; // 5 total questions
+    const isCompleted = questionsAnswered >= 10; // 10 total questions
 
     let startTimes = r3.question_start_times || {};
     let needsUpsert = false;
 
     const currentQOrder = questionsAnswered + 1;
-    if (currentQOrder <= 5 && !startTimes[currentQOrder]) {
+    if (currentQOrder <= 10 && !startTimes[currentQOrder]) {
       startTimes[currentQOrder] = new Date().toISOString();
       needsUpsert = true;
     }

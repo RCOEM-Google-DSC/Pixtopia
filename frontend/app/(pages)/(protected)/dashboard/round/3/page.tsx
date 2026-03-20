@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useTeam } from "@/lib/useTeam";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ interface TeamProgress {
   question_start_times?: Record<string, string>;
 }
 
-const TOTAL_QUESTIONS = 5;
+const TOTAL_QUESTIONS = 10;
 
 export default function Round3Page() {
   const { team, loading: teamLoading } = useTeam();
@@ -47,6 +47,9 @@ export default function Round3Page() {
   const [submitting, setSubmitting] = useState(false);
   const [requestingHint, setRequestingHint] = useState(false);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const selectedOptionRef = useRef<number | null>(null);
+  const [answerLocked, setAnswerLocked] = useState(false);
+  const answerLockedRef = useRef(false);
   // currentQuestionIndex is derived from progress.questions_answered on load,
   // then advanced locally on correct answers without re-fetching.
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -96,12 +99,21 @@ export default function Round3Page() {
   const allHintsExhausted =
     currentQuestion ? hintsUnlockedForCurrent >= currentQuestion.hints.length : true;
 
+  // Keep refs in sync so the timer closure always reads the latest values
+  useEffect(() => {
+    selectedOptionRef.current = selectedOption;
+  }, [selectedOption]);
+  useEffect(() => {
+    answerLockedRef.current = answerLocked;
+  }, [answerLocked]);
+
   useEffect(() => {
     if (!currentQuestion || !progress?.question_start_times) return;
     const startTimeStr = progress.question_start_times[currentQuestion.question_order];
     if (!startTimeStr) return;
     
     const startTime = new Date(startTimeStr).getTime();
+    let timerDone = false;
     
     const tick = () => {
       const now = Date.now();
@@ -109,20 +121,90 @@ export default function Round3Page() {
       const remaining = Math.max(0, 60 - elapsed);
       setTimeLeft(remaining);
       
-      if (remaining === 0 && !submitting) {
-         handleSubmit(true);
+      if (remaining === 0 && !timerDone) {
+        timerDone = true;
+        handleTimerExpired(currentQuestion.question_order);
       }
     };
     
-    tick(); // immediate first tick to prevent UI flash
+    tick();
     const interval = setInterval(tick, 1000);
     
     return () => clearInterval(interval);
-  }, [currentQuestion, progress, submitting]);
+  }, [currentQuestion, progress]);
 
-  const handleSubmit = async (isAuto = false) => {
-    if (!isAuto && selectedOption === null) return;
-    if (!currentQuestion) return;
+  // When timer expires: if answer not locked yet, auto-submit. Then advance or show summary.
+  const handleTimerExpired = async (questionOrder: number) => {
+    const alreadyLocked = answerLockedRef.current;
+
+    if (!alreadyLocked) {
+      // Auto-submit whatever is selected (could be null)
+      const currentSelection = selectedOptionRef.current;
+      try {
+        const res = await fetch("/api/rounds/3/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            questionOrder,
+            selectedIndex: currentSelection,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) return;
+
+        if (data.isRoundComplete) {
+          // Last question — show summary now
+          fetchState();
+          setProgress((prev) =>
+            prev ? { ...prev, questions_answered: data.questionsAnswered, is_completed: true } : null
+          );
+          return;
+        }
+        // Store the next start time before advancing
+        setProgress((prev) =>
+          prev
+            ? {
+                ...prev,
+                questions_answered: data.questionsAnswered,
+                question_start_times: {
+                  ...prev.question_start_times,
+                  [questionOrder + 1]: data.nextStartTime,
+                }
+              }
+            : null
+        );
+      } catch {
+        // ignore
+      }
+    } else if (questionOrder >= TOTAL_QUESTIONS) {
+      // Answer was already locked for the last question — now show summary
+      fetchState();
+      setProgress((prev) =>
+        prev ? { ...prev, is_completed: true } : null
+      );
+      return;
+    }
+
+    // Advance to next question — always set start time to NOW so timer starts fresh at 60
+    const freshStartTime = new Date().toISOString();
+    setProgress((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        question_start_times: {
+          ...prev.question_start_times,
+          [questionOrder + 1]: freshStartTime,
+        }
+      };
+    });
+    setCurrentQuestionIndex((i) => i + 1);
+    setSelectedOption(null);
+    setAnswerLocked(false);
+  };
+
+  // Manual submit — locks in the answer but does NOT advance to next question
+  const handleSubmit = async () => {
+    if (selectedOption === null || !currentQuestion || submitting || answerLocked) return;
     setSubmitting(true);
     try {
       const res = await fetch("/api/rounds/3/submit", {
@@ -134,33 +216,26 @@ export default function Round3Page() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        return;
-      }
+      if (!res.ok) return;
 
-      if (data.isRoundComplete) {
-        // We will just re-fetch state to get the final score, correct answers correctly matched up from backend!
-        fetchState();
-        setProgress((prev) =>
-          prev ? { ...prev, questions_answered: data.questionsAnswered, is_completed: true } : null
-        );
-      } else {
-        // Advance to next question optimistically
+      // Mark answer as locked — stay on the same question until timer expires
+      setAnswerLocked(true);
+
+      if (!data.isRoundComplete) {
+        // Only update questions_answered — do NOT store nextStartTime from backend
+        // because the timer hasn't expired yet. The correct start time will be
+        // set in handleTimerExpired when we actually advance.
         setProgress((prev) =>
           prev
             ? {
                 ...prev,
                 questions_answered: data.questionsAnswered,
-                question_start_times: {
-                  ...prev.question_start_times,
-                  [currentQuestion.question_order + 1]: data.nextStartTime,
-                }
               }
             : null
         );
-        setCurrentQuestionIndex((i) => i + 1);
-        setSelectedOption(null);
       }
+      // If isRoundComplete (last question), do nothing extra — just stay locked.
+      // handleTimerExpired will show the summary when the timer runs out.
     } catch {
       // ignore
     } finally {
@@ -294,30 +369,32 @@ export default function Round3Page() {
 
   // ── Question view ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
-      <main className="flex-1 p-8 max-w-5xl mx-auto w-full space-y-10">
+    <div className="h-screen bg-zinc-950 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col justify-between px-4 py-3 max-w-5xl mx-auto w-full min-h-0">
         {currentQuestion && (
-          <>
-            <div className="space-y-6 text-center">
-              <div className="inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
-                <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">
+          <div key={currentQuestionIndex} className="flex-1 flex flex-col justify-between min-h-0 animate-[fadeIn_0.3s_ease-in]">
+            <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+            {/* Header: badge + question + timer */}
+            <div className="text-center space-y-2 shrink-0">
+              <div className="inline-block px-3 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
+                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
                   Question {currentQuestionIndex + 1} of {TOTAL_QUESTIONS}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-white leading-tight tracking-tight mt-6">
+              <h1 className="text-xl md:text-2xl font-black text-white leading-tight tracking-tight">
                 {currentQuestion.question}
               </h1>
-              
-              <div className="w-full max-w-2xl mx-auto mt-6 space-y-2 h-[40px]">
+
+              <div className="w-full max-w-md mx-auto space-y-1">
                 {timeLeft !== null && (
                   <>
-                    <div className="flex items-center justify-center gap-2 font-mono font-bold text-2xl">
-                      <Clock size={24} className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-indigo-400"} />
+                    <div className="flex items-center justify-center gap-1.5 font-mono font-bold text-lg">
+                      <Clock size={18} className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-indigo-400"} />
                       <span className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-yellow-400"}>
                         00:{timeLeft.toString().padStart(2, '0')}
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-2">
+                    <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-1000 ${
                           timeLeft <= 10 ? "bg-red-500" : timeLeft <= 30 ? "bg-amber-400" : "bg-indigo-400"
@@ -330,48 +407,53 @@ export default function Round3Page() {
               </div>
             </div>
 
+            {/* Hints (compact) */}
             {unlockedHints.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
-                  Unlocked Hints
-                </p>
-                <div className="grid gap-3">
-                  {unlockedHints.map((hint, i) => (
-                    <div
-                      key={i}
-                      className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg text-sm text-indigo-300 italic"
-                    >
-                      &ldquo;{hint}&rdquo;
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-2 shrink-0">
+                {unlockedHints.map((hint, i) => (
+                  <div
+                    key={i}
+                    className="p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg text-xs text-indigo-300 italic mb-1"
+                  >
+                    &ldquo;{hint}&rdquo;
+                  </div>
+                ))}
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Image grid — fills remaining space */}
+            <div className="grid grid-cols-2 gap-3 mt-3 flex-1 min-h-0 max-w-3xl mx-auto w-full max-h-[55vh]">
               {currentQuestion.image_urls.map((url, index) => (
                 <Card
                   key={index}
-                  className={`group cursor-pointer overflow-hidden border-4 transition-all duration-300 ring-offset-4 ring-offset-zinc-950 ${
-                    selectedOption === index
-                      ? "border-indigo-500 ring-4 ring-indigo-500/50 scale-[1.02]"
-                      : "border-zinc-800 hover:border-zinc-700 hover:scale-[1.01]"
+                  className={`group overflow-hidden border-3 transition-all duration-300 ${
+                    answerLocked
+                      ? selectedOption === index
+                        ? "border-emerald-500 ring-2 ring-emerald-500/50 cursor-default"
+                        : "border-zinc-800 opacity-50 cursor-default"
+                      : selectedOption === index
+                        ? "border-indigo-500 ring-2 ring-indigo-500/50 cursor-pointer"
+                        : "border-zinc-800 hover:border-zinc-700 cursor-pointer"
                   }`}
-                  onClick={() => setSelectedOption(index)}
+                  onClick={() => !answerLocked && setSelectedOption(index)}
                 >
-                  <CardContent className="p-0 relative aspect-video overflow-hidden">
+                  <CardContent className="p-0 relative h-full overflow-hidden bg-white">
                     <img
                       src={url}
                       alt={`Option ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="w-full h-full object-contain"
                     />
                     <div
-                      className={`absolute inset-0 bg-indigo-600/20 transition-opacity duration-300 ${
-                        selectedOption === index ? "opacity-100" : "opacity-0"
+                      className={`absolute inset-0 transition-opacity duration-300 ${
+                        answerLocked && selectedOption === index
+                          ? "bg-emerald-600/20 opacity-100"
+                          : selectedOption === index
+                            ? "bg-indigo-600/20 opacity-100"
+                            : "bg-indigo-600/20 opacity-0"
                       }`}
                     />
-                    <div className="absolute bottom-4 right-4 bg-zinc-950/80 backdrop-blur-md px-3 py-1 rounded-md border border-white/10">
-                      <span className="text-xs font-bold text-zinc-300 uppercase">
+                    <div className="absolute bottom-2 right-2 bg-zinc-950/80 backdrop-blur-md px-2 py-0.5 rounded border border-white/10">
+                      <span className="text-[10px] font-bold text-zinc-300 uppercase">
                         Option {index + 1}
                       </span>
                     </div>
@@ -380,41 +462,63 @@ export default function Round3Page() {
               ))}
             </div>
 
-            <div className="flex flex-col items-center gap-6 pt-6">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+            {/* Bottom action bar */}
+            <div className="shrink-0 py-3 flex items-center justify-center gap-4">
+              {answerLocked ? (
+                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                  <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-emerald-400 font-bold uppercase tracking-widest text-xs">Answer Locked In</span>
+                </div>
+              ) : (
+                <>
                   <Button
-                    variant="outline"
-                    className="border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900 px-6"
-                    disabled={requestingHint || allHintsExhausted}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-5 text-sm tracking-widest font-black uppercase rounded-xl transition-all hover:scale-105 disabled:opacity-50"
+                    disabled={selectedOption === null || submitting}
+                    onClick={handleSubmit}
                   >
-                    {requestingHint ? "Unlocking..." : hintsUnlockedForCurrent === 0 ? "Get Hint" : "Get 2nd Hint"}
+                    {submitting ? "Submitting..." : "Submit Answer"}
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Purchase a Hint?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Unlocking a hint will cost{" "}
-                      <span className="font-bold text-indigo-400">{nextHintCost} points</span>.
-                      Your score will be updated immediately. Are you sure?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleGetHint}
-                      className="bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      Purchase Hint
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                  {hintsUnlockedForCurrent === 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900 px-4 py-5 text-xs"
+                          disabled={requestingHint}
+                        >
+                          {requestingHint ? "Unlocking..." : "Get Hint"}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Purchase a Hint?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Unlocking a hint will cost{" "}
+                            <span className="font-bold text-indigo-400">{nextHintCost} points</span>.
+                            Your score will be updated immediately. Are you sure?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleGetHint}
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            Purchase Hint
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </>
+              )}
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>
   );
 }
+

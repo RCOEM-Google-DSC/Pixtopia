@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
-const TOTAL_QUESTIONS = 5;
+const TOTAL_QUESTIONS = 10;
 
 export async function POST(request: NextRequest) {
   let body;
@@ -67,12 +67,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Question not found" }, { status: 404 });
   }
 
+  console.log(`[R3 DEBUG] Q${questionOrder}: correct_index=${question.correct_index} (type: ${typeof question.correct_index}), selectedIndex=${selectedIndex} (type: ${typeof selectedIndex}), timeElapsed=${timeElapsed.toFixed(1)}s`);
+
   let isCorrect = question.correct_index === selectedIndex;
 
-  if (timeElapsed > 65 || selectedIndex === null) {
+  if (timeElapsed > 120 || selectedIndex === null) {
+      console.log(`[R3 DEBUG] Q${questionOrder}: Forcing incorrect — timeout or null selection`);
       isCorrect = false;
   }
 
+  console.log(`[R3 DEBUG] Q${questionOrder}: isCorrect=${isCorrect}`);
   const awardedPoints = isCorrect ? question.points : 0;
   
   answers[String(questionOrder)] = selectedIndex ?? -1;

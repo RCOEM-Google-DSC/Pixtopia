@@ -32,6 +32,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip Next.js internals, API routes, and all static files
-    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.webp$|.*\\.ico$|.*\\.woff$|.*\\.woff2$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.webp$|.*\\.ico$|.*\\.woff$|.*\\.woff2$|.*\\.glb$|.*\\.gltf$).*)",
   ],
 };
