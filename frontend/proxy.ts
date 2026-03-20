@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-const PUBLIC_PATHS = ["/login", "/leaderboard"];
+const PUBLIC_PATHS = ["/", "/login", "/leaderboard"];
 const IS_DEV = process.env.NEXT_PUBLIC_IS_DEV === "true";
 
 export async function proxy(request: NextRequest) {
@@ -32,6 +32,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip Next.js internals, API routes, and all static files
-    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.webp$|.*\\.ico$|.*\\.woff$|.*\\.woff2$|.*\\.glb$|.*\\.gltf$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.webp$|.*\\.ico$|.*\\.woff$|.*\\.woff2$|.*\\.glb$|.*\\.gltf$|.*\\.mp4$|.*\\.webm$|.*\\.ogg$).*)",
   ],
 };

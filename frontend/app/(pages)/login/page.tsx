@@ -1,12 +1,63 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, Environment, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+
+/* ─── EVE 3D Model (roams / follows cursor) ─────────────── */
+function Eve({ mousePos, isMouseIdle }: { mousePos: React.RefObject<{ x: number; y: number }>; isMouseIdle: boolean }) {
+  const { scene } = useGLTF("/eve.glb");
+  const clonedScene = React.useMemo(() => scene.clone(), [scene]);
+  const groupRef = useRef<THREE.Group>(null);
+  const { viewport } = useThree();
+  const scaleProgress = useRef(0); // starts at 0, animates to 1
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    const t = state.clock.elapsedTime;
+
+    // Smooth entrance — grow from 0 to full size
+    scaleProgress.current = THREE.MathUtils.damp(scaleProgress.current, 1, 2, delta);
+    const s = 15 * scaleProgress.current;
+    groupRef.current.scale.set(s, s, s);
+
+    let targetX: number;
+    let targetY: number;
+
+    if (isMouseIdle) {
+      // Autonomous roaming — gentle figure-8, staying near center
+      targetX = Math.sin(t * 0.3) * 3;
+      targetY = Math.sin(t * 0.6) * 1.5;
+    } else {
+      // Follow cursor — map mouse (-1..1) to limited world coordinates
+      targetX = (mousePos.current?.x ?? 0) * 4;
+      targetY = (mousePos.current?.y ?? 0) * 2.5;
+    }
+
+    // Smooth damping
+    const speed = isMouseIdle ? 1.5 : 3;
+    groupRef.current.position.x = THREE.MathUtils.damp(groupRef.current.position.x, targetX, speed, delta);
+    groupRef.current.position.y = THREE.MathUtils.damp(groupRef.current.position.y, targetY, speed, delta);
+
+    // Face direction of movement (tilt)
+    const dx = targetX - groupRef.current.position.x;
+    groupRef.current.rotation.z = THREE.MathUtils.damp(groupRef.current.rotation.z, -dx * 0.08, 3, delta);
+    groupRef.current.rotation.y = THREE.MathUtils.damp(groupRef.current.rotation.y, dx * 0.15, 3, delta);
+
+    // Gentle floating bob
+    groupRef.current.position.y += Math.sin(t * 2) * 0.01;
+  });
+
+  return (
+    <group ref={groupRef} scale={0} position={[0, 0, 0]}>
+      <primitive object={clonedScene} />
+    </group>
+  );
+}
 
 /* ─── 3D McQueen Model ───────────────────────────────────────── */
 function McQueen({
@@ -219,6 +270,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // EVE mouse tracking
+  const mousePosRef = useRef({ x: 0, y: 0 });
+  const [mouseIdle, setMouseIdle] = useState(true);
+  const mouseIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleModelLoaded = useCallback(() => {
     setModelLoaded(true);
   }, []);
@@ -324,68 +380,149 @@ export default function LoginPage() {
       <AnimatePresence>
         {animState === "login" && (
           <motion.div
-            className="absolute inset-0 z-50 flex items-center justify-center"
-            style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}
+            className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              mousePosRef.current = {
+                x: ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                y: -(((e.clientY - rect.top) / rect.height) * 2 - 1),
+              };
+              setMouseIdle(false);
+              if (mouseIdleTimerRef.current) clearTimeout(mouseIdleTimerRef.current);
+              mouseIdleTimerRef.current = setTimeout(() => setMouseIdle(true), 2000);
+            }}
           >
+            {/* Space background image */}
+            <div className="absolute inset-0">
+              <img
+                alt=""
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 min-w-[120%] min-h-[120%] w-auto h-auto object-cover pointer-events-none"
+                src="/login-bg.png"
+              />
+              {/* Dark overlay for depth */}
+              <div className="absolute inset-0 bg-[#0a0a0f]/40" />
+            </div>
+
+            {/* Back Link - Top Right */}
+            <a
+              href="/"
+              className="absolute top-4 right-4 md:top-8 md:right-12 flex items-center gap-2 z-20 hover:opacity-70 transition-opacity"
+            >
+              <div className="w-3.5 h-3.5">
+                <svg className="block size-full" fill="none" viewBox="0 0 14 14">
+                  <path d="M7 11.0833L2.91667 7L7 2.91667" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.16667" />
+                  <path d="M11.0833 7H2.91667" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.16667" />
+                </svg>
+              </div>
+              <span className="text-[10px] md:text-[12.8px] text-white tracking-[1.28px]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>BACK</span>
+            </a>
+
+            {/* EVE 3D floating behind the form */}
+            <div className="absolute inset-0 z-[15] pointer-events-none">
+              <Canvas camera={{ position: [0, 0, 8], fov: 50 }} dpr={[1, 1.5]} style={{ pointerEvents: 'none' }} eventSource={undefined as unknown as HTMLElement}>
+                <ambientLight intensity={1.2} />
+                <directionalLight position={[5, 5, 5]} intensity={1.5} />
+                <directionalLight position={[-5, 3, -5]} intensity={0.8} color="#a78bfa" />
+                <React.Suspense fallback={null}>
+                  <Eve mousePos={mousePosRef} isMouseIdle={mouseIdle} />
+                  <Environment preset="city" />
+                </React.Suspense>
+              </Canvas>
+            </div>
+
+            {/* Main Content */}
             <motion.div
-              className="login-card"
-              initial={{ y: 50, scale: 0.9, rotateX: 20 }}
-              animate={{ y: 0, scale: 1, rotateX: 0 }}
+              className="relative z-10 w-full max-w-[90vw] md:max-w-[555px] px-4 flex flex-col items-center"
+              initial={{ y: 50, scale: 0.9 }}
+              animate={{ y: 0, scale: 1 }}
               transition={{ duration: 0.8, type: "spring" }}
             >
-              <h1 className="racing-font login-title-number">95</h1>
-              <h2 className="racing-font login-title-text">Pixtopia</h2>
-              <p className="login-subtitle">Official Team Authentication</p>
+              {/* PIXTOPIA Logo */}
+              <div className="w-full max-w-[280px] sm:max-w-[350px] md:max-w-[437px] mb-6 md:mb-8">
+                <svg className="w-full h-auto" fill="none" preserveAspectRatio="xMidYMid meet" viewBox="0 0 440.264 121">
+                  <g>
+                    <path d="M1.5 3.13889H28.0023C36.9454 3.13889 43.6528 5.54259 48.1244 10.35C52.596 15.1574 54.8317 22.2046 54.8317 31.4917V42.8C54.8317 52.087 52.596 59.1343 48.1244 63.9417C43.6528 68.7491 36.9454 71.1528 28.0023 71.1528H19.4954V117.861H1.5V3.13889ZM28.0023 54.7639C30.947 54.7639 33.1282 53.9444 34.5461 52.3056C36.0729 50.6667 36.8364 47.8806 36.8364 43.9472V30.3444C36.8364 26.4111 36.0729 23.625 34.5461 21.9861C33.1282 20.3472 30.947 19.5278 28.0023 19.5278H19.4954V54.7639H28.0023Z" fill="white" stroke="white" strokeWidth="3" />
+                    <path d="M64.6052 3.13889H82.6006V117.861H64.6052V3.13889Z" fill="white" stroke="white" strokeWidth="3" />
+                    <path d="M111.947 59.1889L92.1517 3.13889H111.129L123.235 40.1778H123.562L135.995 3.13889H153.009L133.214 59.1889L153.99 117.861H135.013L121.926 77.8722H121.599L108.184 117.861H91.1701L111.947 59.1889Z" fill="white" stroke="white" strokeWidth="3" />
+                    <path d="M176.607 19.5278H157.794V3.13889H213.416V19.5278H194.603V117.861H176.607V19.5278Z" fill="white" stroke="white" strokeWidth="3" />
+                    <path d="M247.501 119.5C238.667 119.5 231.905 116.987 227.215 111.961C222.526 106.935 220.181 99.8333 220.181 90.6556V30.3444C220.181 21.1667 222.526 14.0648 227.215 9.03889C231.905 4.01296 238.667 1.5 247.501 1.5C256.335 1.5 263.097 4.01296 267.787 9.03889C272.476 14.0648 274.821 21.1667 274.821 30.3444V90.6556C274.821 99.8333 272.476 106.935 267.787 111.961C263.097 116.987 256.335 119.5 247.501 119.5ZM247.501 103.111C253.718 103.111 256.826 99.3417 256.826 91.8028V29.1972C256.826 21.6583 253.718 17.8889 247.501 17.8889C241.285 17.8889 238.176 21.6583 238.176 29.1972V91.8028C238.176 99.3417 241.285 103.111 247.501 103.111Z" fill="white" stroke="white" strokeWidth="3" />
+                    <path d="M286.991 3.13889H313.494C322.437 3.13889 329.144 5.54259 333.616 10.35C338.087 15.1574 340.323 22.2046 340.323 31.4917V42.8C340.323 52.087 338.087 59.1343 333.616 63.9417C329.144 68.7491 322.437 71.1528 313.494 71.1528H304.987V117.861H286.991V3.13889ZM313.494 54.7639C316.438 54.7639 318.619 53.9444 320.037 52.3056C321.564 50.6667 322.328 47.8806 322.328 43.9472V30.3444C322.328 26.4111 321.564 23.625 320.037 21.9861C318.619 20.3472 316.438 19.5278 313.494 19.5278H304.987V54.7639H313.494Z" fill="white" stroke="white" strokeWidth="3" />
+                    <path d="M350.096 3.13889H368.092V117.861H350.096V3.13889Z" fill="white" stroke="white" strokeWidth="3" />
+                    <path d="M395.475 3.13889H419.85L438.5 117.861H420.505L417.233 95.0806V95.4083H396.783L393.512 117.861H376.825L395.475 3.13889ZM415.106 79.8389L407.09 23.1333H406.763L398.91 79.8389H415.106Z" fill="white" stroke="white" strokeWidth="3" />
+                  </g>
+                </svg>
+              </div>
 
-              <form onSubmit={handleLogin} className="login-form">
-                {error && (
-                  <div className="login-error">{error}</div>
-                )}
-
-                <div className="login-field">
-                  <label className="login-label">Leader Email</label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="leader@example.com"
-                    className="login-input"
-                  />
-                </div>
-                <div className="login-field">
-                  <label className="login-label">Team Password</label>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="login-input"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  id="login-btn"
-                  disabled={loading}
-                  className="btn-race login-button racing-font"
+              {/* Authentication Form Container */}
+              <div className="bg-[rgba(0,0,0,0.55)] border border-solid border-white rounded-[20px] md:rounded-[27px] w-full max-w-[555px] p-6 sm:p-8 md:p-12 backdrop-blur-sm">
+                {/* Title */}
+                <h1
+                  className="text-[20px] sm:text-[28px] md:text-[36px] text-center text-white tracking-[0.1em] leading-tight mb-6 md:mb-8 font-medium"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  {loading ? "Signing in…" : "Enter Race"}
-                </button>
-                <div className="login-links">
-                  <a href="#" className="login-link login-link--red">
-                    Recover Key
-                  </a>
-                  <a href="#" className="login-link login-link--amber">
-                    Technical Support
-                  </a>
-                </div>
-              </form>
+                  Authenticate to &ldquo;Enter the World&rdquo;
+                </h1>
+
+                <form onSubmit={handleLogin} className="flex flex-col gap-0">
+                  {error && (
+                    <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm text-center">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Email Input */}
+                  <div className="mb-4 md:mb-6">
+                    <label
+                      className="text-[14px] sm:text-[18px] md:text-[24px] text-white tracking-[0.1em] block mb-2 font-medium"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      Enter Leader&apos;s Email:
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder="leader@example.com"
+                      className="w-full backdrop-blur-sm bg-[rgba(255,255,255,0.06)] border border-solid border-white rounded-[8px] h-[45px] md:h-[56px] px-4 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    />
+                  </div>
+
+                  {/* Password Input */}
+                  <div className="mb-6 md:mb-8">
+                    <label
+                      className="text-[14px] sm:text-[18px] md:text-[24px] text-white tracking-[0.1em] block mb-2 font-medium"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      Password:
+                    </label>
+                    <input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="••••••••"
+                      className="w-full backdrop-blur-sm bg-[rgba(255,255,255,0.06)] border border-solid border-white rounded-[8px] h-[45px] md:h-[56px] px-4 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    id="login-btn"
+                    disabled={loading}
+                    className="w-full bg-white border border-solid border-white rounded-[8px] h-[45px] md:h-[51px] text-[16px] sm:text-[20px] md:text-[24px] text-black tracking-[0.1em] hover:bg-gray-100 transition-colors disabled:opacity-50 font-medium"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {loading ? "Signing in…" : "Submit"}
+                  </button>
+                </form>
+              </div>
             </motion.div>
           </motion.div>
         )}
