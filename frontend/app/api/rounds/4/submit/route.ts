@@ -130,7 +130,9 @@ export async function POST(request: NextRequest) {
             { status: 400 },
           );
         }
-        if (normalizeAnswer(answer) !== normalizeAnswer(question.answer || "")) {
+        if (
+          normalizeAnswer(answer) !== normalizeAnswer(question.answer || "")
+        ) {
           return NextResponse.json(
             { error: "Incorrect answer" },
             { status: 400 },
