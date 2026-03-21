@@ -200,11 +200,26 @@ export async function POST() {
     });
   }
 
-  // ── Match scores and update teams ───────────────────────────────────────
+  // ── Get existing round2 submissions for delta calculation ───────────────
+  const teamIds = teams.map((t) => t.id);
+  const { data: submissions } = await admin
+    .from("submissions")
+    .select("team_id, round2")
+    .in("team_id", teamIds);
+
+  // Build team_id → previous round2 score map
+  const prevScoreMap = new Map<string, number>();
+  for (const sub of submissions || []) {
+    prevScoreMap.set(sub.team_id, sub.round2?.score ?? 0);
+  }
+
+  // ── Match scores and update teams (delta-based) ─────────────────────────
   const results: {
     teamName: string;
     username: string;
-    scoreAdded: number;
+    newScore: number;
+    prevScore: number;
+    delta: number;
     matched: boolean;
   }[] = [];
 
@@ -214,50 +229,81 @@ export async function POST() {
       results.push({
         teamName: team.team_name,
         username: "",
-        scoreAdded: 0,
+        newScore: 0,
+        prevScore: 0,
+        delta: 0,
         matched: false,
       });
       continue;
     }
 
-    const score = scoreMap.get(leader.username);
-    if (score === undefined || score === 0) {
+    const newScore = scoreMap.get(leader.username) ?? 0;
+    if (newScore === 0) {
       results.push({
         teamName: team.team_name,
         username: leader.username,
-        scoreAdded: 0,
+        newScore: 0,
+        prevScore: prevScoreMap.get(team.id) ?? 0,
+        delta: 0,
         matched: false,
       });
       continue;
     }
 
-    // Add the HackerRank score to existing team points
-    const { error: updateErr } = await admin
-      .from("teams")
-      .update({ points: team.points + score })
-      .eq("id", team.id);
+    const prevScore = prevScoreMap.get(team.id) ?? 0;
+    const delta = newScore - prevScore;
 
-    if (updateErr) {
-      console.error(`Failed to update team ${team.team_name}:`, updateErr);
-      results.push({
-        teamName: team.team_name,
-        username: leader.username,
-        scoreAdded: 0,
-        matched: false,
-      });
-      continue;
+    // Update team points only if there's a positive delta
+    if (delta > 0) {
+      const { error: updateErr } = await admin
+        .from("teams")
+        .update({ points: team.points + delta })
+        .eq("id", team.id);
+
+      if (updateErr) {
+        console.error(`Failed to update team ${team.team_name}:`, updateErr);
+        results.push({
+          teamName: team.team_name,
+          username: leader.username,
+          newScore,
+          prevScore,
+          delta: 0,
+          matched: false,
+        });
+        continue;
+      }
+    }
+
+    // Store/update round2 score in submissions (upsert)
+    const round2Data = {
+      score: newScore,
+      username: leader.username,
+      imported_at: new Date().toISOString(),
+    };
+
+    const { error: subErr } = await admin
+      .from("submissions")
+      .upsert(
+        { team_id: team.id, round2: round2Data },
+        { onConflict: "team_id" }
+      );
+
+    if (subErr) {
+      console.error(`Failed to save submission for ${team.team_name}:`, subErr);
     }
 
     results.push({
       teamName: team.team_name,
       username: leader.username,
-      scoreAdded: score,
+      newScore,
+      prevScore,
+      delta: Math.max(0, delta),
       matched: true,
     });
   }
 
   const matchedCount = results.filter((r) => r.matched).length;
-  const totalScore = results.reduce((acc, r) => acc + r.scoreAdded, 0);
+  const totalDelta = results.reduce((acc, r) => acc + r.delta, 0);
 
   return NextResponse.json({
     success: true,
@@ -265,7 +311,7 @@ export async function POST() {
       totalTeams: teams.length,
       matchedTeams: matchedCount,
       unmatchedTeams: teams.length - matchedCount,
-      totalPointsAdded: totalScore,
+      totalPointsAdded: totalDelta,
       contestsScraped: [slug1, slug2].filter(Boolean),
       leaderboard1Entries: leaderboard1.length,
       leaderboard2Entries: leaderboard2.length,
