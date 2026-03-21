@@ -59,9 +59,10 @@ const SegmentedInput: React.FC<SegmentedInputProps> = ({
             onChange={(e) => handleChange(e, i)}
             onKeyDown={(e) => handleKeyDown(e, i)}
             aria-label={`Letter ${i + 1}`}
-            className={`w-10 h-12 sm:w-12 sm:h-14 bg-zinc-900 border-2 rounded-lg text-center text-xl sm:text-2xl font-black text-white outline-none transition-all
-              ${isRevealed ? "border-indigo-500/50 bg-indigo-500/10 text-indigo-400" : "border-zinc-800 focus:border-indigo-500"}
+            className={`w-10 h-14 sm:w-12 sm:h-16 bg-transparent border-0 border-b-4 rounded-none text-center text-2xl sm:text-4xl font-black outline-none transition-all
+              ${isRevealed ? "border-black text-black" : "border-white/70 text-white focus:border-white focus:text-white pb-1"}
             `}
+            style={{ boxShadow: "none" }}
           />
         );
       })}
