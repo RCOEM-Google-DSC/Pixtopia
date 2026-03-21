@@ -309,7 +309,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-5rem)] w-full overflow-hidden">
+    <div className="relative min-h-screen w-full overflow-hidden">
       {/* Background Image */}
       <div className="fixed inset-0 z-0 bg-[#aed4f4]">
         <Image
@@ -323,7 +323,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
       </div>
 
       {/* Content Overlay */}
-      <div className="relative z-10 flex min-h-[calc(100vh-5rem)] flex-col">
+      <div className="relative z-10 flex min-h-screen flex-col">
         {/* Hidden eager preload tags are SSR-rendered, so browser starts fetching all clues immediately. */}
         <div className="hidden" aria-hidden="true">
           {allPartAImageUrls.map((url, idx) => (

@@ -323,7 +323,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-5rem)] w-full overflow-hidden">
+    <div className="relative min-h-screen w-full overflow-hidden">
       {/* Background Image */}
       <div className="fixed inset-0 z-0 bg-[#aed4f4]">
         <Image
@@ -336,7 +336,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
         />
       </div>
 
-      <div className="relative z-10 flex min-h-[calc(100vh-5rem)] flex-col">
+      <div className="relative z-10 flex min-h-screen flex-col">
         {/* Hidden eager preload tags for videos conceptually, but standard link preload */}
         <div className="hidden" aria-hidden="true">
           {allVideoUrls.map((url, idx) => (

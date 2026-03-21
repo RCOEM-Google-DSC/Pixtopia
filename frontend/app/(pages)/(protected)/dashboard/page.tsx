@@ -8,8 +8,9 @@ import {
   subscribeToGameState, startRound, endRound,
   GameState, RoundStatus,
 } from "@/lib/database";
-import { Trophy, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import svgPaths from "@/lib/cardSvgPaths";
+import SiteNavbar from "@/app/Components/Navigation/DashboardNavbar";
 
 /* ─── card image paths (from card repo assets) ─── */
 const imgPngwingCom4 = "/cards/card-1.png";
@@ -418,27 +419,29 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] relative text-white overflow-hidden bg-black" style={{ fontFamily: "'Brandon Grotesque', sans-serif" }}>
+    <div className="min-h-screen relative text-white overflow-hidden bg-black" style={{ fontFamily: "'Brandon Grotesque', sans-serif" }}>
+      <SiteNavbar />
 
       {/* ─── Content ─── */}
       <div className="relative z-10">
-        {/* Header */}
-        <div className="relative overflow-hidden border-b border-white/10">
-          <div className="max-w-7xl mx-auto px-6 py-10">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-              Welcome, {team?.team_name ?? user?.email?.split("@")[0] ?? "Team"} 👋
+        {/* Team Name */}
+        <div className="px-8 md:px-12 pt-16 pb-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1
+              className="text-[2rem] md:text-[2.8rem] font-bold uppercase tracking-[0.15em] text-white leading-none"
+              style={{ letterSpacing: '0.15em' }}
+            >
+              {team?.team_name ?? user?.email?.split("@")[0] ?? "Team"}
             </h1>
-            <p className="text-zinc-400 mt-2">
-              Total Score:{" "}
-              <span className="text-yellow-400 font-bold">{team?.points ?? 0} GC</span>
-            </p>
             {isAdmin && (
-              <div className="mt-3">
-                <span className="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-3 py-1 rounded-full">
-                  🛡 Admin Mode — You can start and end rounds
-                </span>
-              </div>
+              <span className="text-[10px] uppercase tracking-widest text-zinc-500 border border-zinc-700 px-3 py-1 rounded-full">
+                Admin
+              </span>
             )}
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 block">Score</span>
+            <span className="text-2xl font-bold text-white tabular-nums">{team?.points ?? 0}</span>
           </div>
         </div>
 
@@ -481,16 +484,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Leaderboard teaser */}
-          <div className="mt-10 flex justify-center">
-            <button
-              onClick={() => router.push("/leaderboard")}
-              className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl text-sm font-medium transition-all border border-white/20"
-            >
-              <Trophy size={16} className="text-yellow-400" />
-              View Live Leaderboard
-            </button>
-          </div>
         </div>
       </div>
 

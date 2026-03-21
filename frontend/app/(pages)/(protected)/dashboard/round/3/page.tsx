@@ -57,6 +57,8 @@ export default function Round3Page() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
   const timerDoneRef = useRef(false);
+  const requestingHintRef = useRef(false);
+  const pausedAtRef = useRef<number | null>(null);
   const [roundScore, setRoundScore] = useState(0);
   const [teamPoints, setTeamPoints] = useState(0);
 
@@ -126,10 +128,14 @@ export default function Round3Page() {
   }, [currentQuestionIndex, progress?.question_start_times]);
 
   // Timer effect — depends only on startTimestamp, NOT on progress
+  // Pauses while a hint is being fetched (requestingHintRef)
   useEffect(() => {
     if (startTimestamp === null) return;
 
     const tick = () => {
+      // If hint is loading, freeze the timer
+      if (requestingHintRef.current) return;
+
       const now = Date.now();
       const elapsed = Math.floor((now - startTimestamp) / 1000);
       const remaining = Math.max(0, 60 - elapsed);
@@ -230,6 +236,8 @@ export default function Round3Page() {
   const handleGetHint = async () => {
     if (!currentQuestion) return;
     setRequestingHint(true);
+    requestingHintRef.current = true;
+    pausedAtRef.current = Date.now();
     try {
       const res = await fetch("/api/rounds/3/hint", {
         method: "POST",
@@ -260,6 +268,13 @@ export default function Round3Page() {
     } catch {
       // ignore
     } finally {
+      // Give back the time spent waiting for the hint
+      if (pausedAtRef.current && startTimestamp) {
+        const pausedMs = Date.now() - pausedAtRef.current;
+        setStartTimestamp((prev) => (prev ? prev + pausedMs : prev));
+      }
+      pausedAtRef.current = null;
+      requestingHintRef.current = false;
       setRequestingHint(false);
     }
   };
@@ -267,7 +282,7 @@ export default function Round3Page() {
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading || teamLoading) {
     return (
-      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex flex-col">
+      <div className="min-h-screen bg-zinc-950 flex flex-col">
         <div className="p-8 space-y-8 max-w-5xl mx-auto w-full" data-testid="loading-state">
           <Skeleton className="h-12 w-3/4 bg-zinc-900" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -284,68 +299,66 @@ export default function Round3Page() {
   if (progress?.is_completed) {
     const correctCount = questions.filter(q => (q as any).is_correct).length;
     const wrongCount = questions.length - correctCount;
-    // We expect teamPoints from state, we'll need to grab it from state logic
-    // But since it wasn't saved in local scope variables earlier, I will use team.points from useTeam hook!
-    // And actually, I should also extract the fetched round score from the API response to render.
+
+    // Calculate hints stats
+    const hintsPerQ = progress.hints_per_question || {};
+    const totalHintsUsed = Object.values(hintsPerQ).reduce((sum, count) => sum + count, 0);
+    const totalHintCost = Object.entries(hintsPerQ).reduce((sum, [qOrder, count]) => {
+      const question = questions.find(q => q.question_order === Number(qOrder));
+      return sum + (question?.hint_point ?? 10) * count;
+    }, 0);
 
     return (
-      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex flex-col">
+      <div className="min-h-screen bg-black flex flex-col">
         <div
-          className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center mt-12"
+          className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center"
           data-testid="completed-state"
         >
-          <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/30 mb-2 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-            <svg
-              className="w-10 h-10 text-emerald-500 animate-[bounce_2s_infinite]"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter shadow-sm mb-2">
-            Round 3 Complete!
+          <svg className="w-12 h-12 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-wide">
+            Round 3 Complete
           </h1>
-          <p className="text-zinc-400 max-w-md pb-4">
-            Excellent work! Here&apos;s your summary for this round:
-          </p>
 
-          <div className="flex justify-center gap-6 mt-2 mb-4 w-full max-w-lg">
-            <div className="flex-1 bg-green-500/10 border border-green-500/20 px-6 py-4 rounded-xl flex flex-col items-center justify-center">
-              <p className="text-green-500 font-black text-4xl mb-1">{correctCount}</p>
-              <p className="text-zinc-400 text-[10px] uppercase font-bold tracking-widest">Correct</p>
+          <div className="flex justify-center gap-8 mt-4">
+            <div className="text-center">
+              <p className="text-3xl font-black text-white">{correctCount}</p>
+              <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Correct</p>
             </div>
-            <div className="flex-1 bg-red-500/10 border border-red-500/20 px-6 py-4 rounded-xl flex flex-col items-center justify-center">
-              <p className="text-red-500 font-black text-4xl mb-1">{wrongCount}</p>
-              <p className="text-zinc-400 text-[10px] uppercase font-bold tracking-widest">Wrong</p>
+            <div className="w-px bg-zinc-800" />
+            <div className="text-center">
+              <p className="text-3xl font-black text-white">{wrongCount}</p>
+              <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Wrong</p>
+            </div>
+            <div className="w-px bg-zinc-800" />
+            <div className="text-center">
+              <p className="text-3xl font-black text-amber-400">+{roundScore}</p>
+              <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Points</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 w-full max-w-lg mx-auto mt-2">
-            <div className="bg-zinc-900/80 border border-zinc-800 p-5 rounded-xl flex flex-col items-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-yellow-500/5" />
-              <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1 relative z-10">Round Points</p>
-              <p className="text-3xl font-black text-yellow-500 relative z-10">+{roundScore}</p>
+          {/* Hints summary */}
+          {totalHintsUsed > 0 && (
+            <div className="flex justify-center gap-8 mt-2 pt-4 border-t border-zinc-800/50">
+              <div className="text-center">
+                <p className="text-2xl font-black text-white">{totalHintsUsed}</p>
+                <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Hints Used</p>
+              </div>
+              <div className="w-px bg-zinc-800" />
+              <div className="text-center">
+                <p className="text-2xl font-black text-red-400">-{totalHintCost}</p>
+                <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Hint Cost</p>
+              </div>
             </div>
-            <div className="bg-zinc-900/80 border border-zinc-800 p-5 rounded-xl flex flex-col items-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-indigo-500/5" />
-              <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1 relative z-10">Total Points</p>
-              <p className="text-3xl font-black text-indigo-400 relative z-10">{teamPoints}</p>
-            </div>
-          </div>
+          )}
 
-          <Button
-            className="mt-8 bg-zinc-800 hover:bg-zinc-700 text-white px-10 py-6 text-lg tracking-widest font-black uppercase rounded-xl transition-all hover:scale-105"
+          <button
+            className="mt-8 border border-zinc-700 hover:border-zinc-500 text-white px-8 py-3 text-sm tracking-[0.2em] uppercase rounded-lg transition-all"
             onClick={() => (window.location.href = "/dashboard")}
           >
-            Return to Dashboard
-          </Button>
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );
@@ -353,19 +366,17 @@ export default function Round3Page() {
 
   // ── Question view ────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen bg-zinc-950 flex flex-col overflow-hidden">
+    <div className="h-screen bg-black flex flex-col overflow-hidden">
       <main className="flex-1 flex flex-col justify-between px-4 py-3 max-w-5xl mx-auto w-full min-h-0">
         {currentQuestion && (
           <div key={currentQuestionIndex} className="flex-1 flex flex-col justify-between min-h-0 animate-[fadeIn_0.3s_ease-in]">
             <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
             {/* Header: badge + question + timer */}
             <div className="text-center space-y-2 shrink-0">
-              <div className="inline-block px-3 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
-                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
-                  Question {currentQuestionIndex + 1} of {TOTAL_QUESTIONS}
-                </span>
-              </div>
-              <h1 className="text-xl md:text-2xl font-black text-white leading-tight tracking-tight">
+              <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
+                Question {currentQuestionIndex + 1} of {TOTAL_QUESTIONS}
+              </span>
+              <h1 className="text-xl md:text-2xl font-bold text-white leading-tight">
                 {currentQuestion.question}
               </h1>
 
@@ -373,15 +384,15 @@ export default function Round3Page() {
                 {timeLeft !== null && (
                   <>
                     <div className="flex items-center justify-center gap-1.5 font-mono font-bold text-lg">
-                      <Clock size={18} className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-indigo-400"} />
-                      <span className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-yellow-400"}>
+                      <Clock size={16} className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-white"} />
+                      <span className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-white"}>
                         00:{timeLeft.toString().padStart(2, '0')}
                       </span>
                     </div>
-                    <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="w-full h-[2px] bg-zinc-900 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-1000 ${
-                          timeLeft <= 10 ? "bg-red-500" : timeLeft <= 30 ? "bg-amber-400" : "bg-indigo-400"
+                          timeLeft <= 10 ? "bg-red-500" : timeLeft <= 30 ? "bg-amber-400" : "bg-white"
                         }`}
                         style={{ width: `${(timeLeft / 60) * 100}%` }}
                       />
@@ -397,7 +408,7 @@ export default function Round3Page() {
                 {unlockedHints.map((hint, i) => (
                   <div
                     key={i}
-                    className="p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg text-xs text-indigo-300 italic mb-1"
+                    className="p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg text-xs text-zinc-400 italic mb-1"
                   >
                     &ldquo;{hint}&rdquo;
                   </div>
@@ -410,14 +421,14 @@ export default function Round3Page() {
               {currentQuestion.image_urls.map((url, index) => (
                 <Card
                   key={index}
-                  className={`group overflow-hidden border-3 transition-all duration-300 ${
+                  className={`group overflow-hidden border-[3px] transition-all duration-300 ${
                     answerLocked
                       ? selectedOption === index
-                        ? "border-emerald-500 ring-2 ring-emerald-500/50 cursor-default"
-                        : "border-zinc-800 opacity-50 cursor-default"
+                        ? "border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)] cursor-default"
+                        : "border-zinc-800 opacity-40 cursor-default"
                       : selectedOption === index
-                        ? "border-indigo-500 ring-2 ring-indigo-500/50 cursor-pointer"
-                        : "border-zinc-800 hover:border-zinc-700 cursor-pointer"
+                        ? "border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)] cursor-pointer"
+                        : "border-zinc-800 hover:border-zinc-600 cursor-pointer"
                   }`}
                   onClick={() => !answerLocked && setSelectedOption(index)}
                 >
@@ -429,14 +440,12 @@ export default function Round3Page() {
                     />
                     <div
                       className={`absolute inset-0 transition-opacity duration-300 ${
-                        answerLocked && selectedOption === index
-                          ? "bg-emerald-600/20 opacity-100"
-                          : selectedOption === index
-                            ? "bg-indigo-600/20 opacity-100"
-                            : "bg-indigo-600/20 opacity-0"
+                        selectedOption === index
+                          ? "bg-sky-500/10 opacity-100"
+                          : "bg-transparent opacity-0"
                       }`}
                     />
-                    <div className="absolute bottom-2 right-2 bg-zinc-950/80 backdrop-blur-md px-2 py-0.5 rounded border border-white/10">
+                    <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded border border-white/10">
                       <span className="text-[10px] font-bold text-zinc-300 uppercase">
                         Option {index + 1}
                       </span>
@@ -449,20 +458,20 @@ export default function Round3Page() {
             {/* Bottom action bar */}
             <div className="shrink-0 py-3 flex items-center justify-center gap-4">
               {answerLocked ? (
-                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                  <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                <div className="flex items-center gap-2 px-4 py-2 border border-zinc-700 rounded-lg">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-emerald-400 font-bold uppercase tracking-widest text-xs">Answer Locked In</span>
+                  <span className="text-zinc-300 font-medium uppercase tracking-widest text-xs">Locked In</span>
                 </div>
               ) : (
                 <>
                   <Button
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-5 text-sm tracking-widest font-black uppercase rounded-xl transition-all hover:scale-105 disabled:opacity-50"
+                    className="bg-white hover:bg-zinc-200 text-black px-8 py-5 text-sm tracking-widest font-bold uppercase rounded-lg transition-all disabled:opacity-50"
                     disabled={selectedOption === null || submitting || (timeLeft !== null && timeLeft <= 0)}
                     onClick={handleSubmit}
                   >
-                    {submitting ? "Submitting..." : "Submit Answer"}
+                    {submitting ? "Submitting..." : "Submit"}
                   </Button>
                   {hintsUnlockedForCurrent === 0 && (
                     <AlertDialog>
@@ -480,15 +489,15 @@ export default function Round3Page() {
                           <AlertDialogTitle>Purchase a Hint?</AlertDialogTitle>
                           <AlertDialogDescription>
                             Unlocking a hint will cost{" "}
-                            <span className="font-bold text-indigo-400">{nextHintCost} points</span>.
-                            Your score will be updated immediately. Are you sure?
+                            <span className="font-bold text-black">{nextHintCost} points</span>.
+                            Your score will be updated immediately.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={handleGetHint}
-                            className="bg-indigo-600 hover:bg-indigo-700"
+                            className="bg-black hover:bg-zinc-800 text-white"
                           >
                             Purchase Hint
                           </AlertDialogAction>
@@ -505,4 +514,5 @@ export default function Round3Page() {
     </div>
   );
 }
+
 

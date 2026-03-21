@@ -1,34 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/teams
- * Returns all teams (id, team_name, points) — used by the leaderboard.
- * Accessible to all authenticated users.
  *
- * Query params:
- *   ?leaderId=<uuid>  – filter to the single team whose leader_id matches
+ * Public (no leaderId): Returns all teams with only public fields
+ *   (id, team_name, points) — used by the leaderboard. No auth required.
+ *   Uses admin client to bypass RLS.
+ *
+ * Private (?leaderId=<uuid>): Returns full team data for the matching team.
+ *   Requires authentication.
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { searchParams } = new URL(request.url);
   const leaderId = searchParams.get("leaderId");
 
-  let query = supabase.from("teams").select("id, team_name, points, leader_id, team_members_ids, password");
-
+  // If leaderId is provided, require authentication and return full data
   if (leaderId) {
-    query = query.eq("leader_id", leaderId);
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data, error } = await supabase
+      .from("teams")
+      .select("id, team_name, points, leader_id, team_members_ids, password")
+      .eq("leader_id", leaderId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data ?? []);
   }
 
-  const { data, error } = await query;
+  // Public: use admin client to bypass RLS, return only safe fields
+  const supabase = await createAdminClient();
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, team_name, points");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -36,3 +49,4 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(data ?? []);
 }
+

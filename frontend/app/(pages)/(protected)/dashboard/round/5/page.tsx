@@ -7,7 +7,7 @@ export default function Round5Page() {
   const router = useRouter();
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex items-center justify-center text-white px-4">
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white px-4">
       <div className="text-center space-y-6 max-w-md">
         <div className="w-24 h-24 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto">
           <Gamepad2 size={40} className="text-rose-400" />

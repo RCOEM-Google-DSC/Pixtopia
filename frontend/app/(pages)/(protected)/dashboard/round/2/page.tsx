@@ -55,7 +55,7 @@ export default function Round2Page() {
   ];
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 text-white flex items-center justify-center px-4">
+    <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center px-4">
       <div className="w-full max-w-lg space-y-6">
         {/* Header card */}
         <div className="relative bg-zinc-900/60 border border-cyan-500/30 rounded-2xl p-8 overflow-hidden">
