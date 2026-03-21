@@ -418,7 +418,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen relative text-white overflow-hidden bg-black" style={{ fontFamily: "'Brandon Grotesque', sans-serif" }}>
+    <div className="min-h-[calc(100vh-5rem)] relative text-white overflow-hidden bg-black" style={{ fontFamily: "'Brandon Grotesque', sans-serif" }}>
 
       {/* ─── Content ─── */}
       <div className="relative z-10">

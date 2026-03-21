@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { round4PartAQuestions } from "@/lib/round4PartAQuestions";
-import { round4PartBQuestions } from "@/lib/round4PartB";
+import { unstable_cache } from "next/cache";
 
-/** Instant in-memory lookup — no DB round-trip for answer validation. */
-function getQuestionByOrder(order: number) {
-  if (order <= 3) {
-    const q = round4PartAQuestions.find((q) => q.order === order);
-    return q ? { order: q.order, answer: q.answer, points: q.points, correct_index: undefined } : null;
-  }
-  const q = round4PartBQuestions.find((q) => q.order === order);
-  return q ? { order: q.order, answer: undefined, correct_index: q.correct_index, points: q.points } : null;
-}
+const getRound4QuestionByOrder = unstable_cache(
+  async (order: number) => {
+    const admin = await createAdminClient();
+    const { data, error } = await admin
+      .from("questions")
+      .select("id, order, answer, correct_index, points")
+      .eq("round_id", "4")
+      .order("id", { ascending: false })
+      .limit(24);
+    if (error) throw new Error(error.message);
+    return (data ?? []).find((q) => q.order === order) ?? null;
+  },
+  ["round4-submit-question-by-order"],
+  { revalidate: 300 },
+);
 
 function normalizeAnswer(value: string): string {
   return value.trim().toLowerCase();
@@ -20,16 +25,28 @@ function normalizeAnswer(value: string): string {
 async function getTeamForUser(userId: string) {
   const admin = await createAdminClient();
 
-  const { data, error } = await admin
+  // Fast path for most users: leader_id match.
+  const leaderMatch = await admin
     .from("teams")
     .select("id, points")
-    .or(`leader_id.eq.${userId},team_members_ids.cs.{"${userId}"}`)
+    .eq("leader_id", userId)
+    .maybeSingle();
+  if (leaderMatch.data) return leaderMatch.data;
+
+  // Fallback for non-leader members.
+  const memberMatch = await admin
+    .from("teams")
+    .select("id, points")
+    .contains("team_members_ids", [userId])
     .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message);
+  if (leaderMatch.error && !memberMatch.data) {
+    throw new Error(leaderMatch.error.message);
   }
-  return data;
+  if (memberMatch.error && !memberMatch.data) {
+    throw new Error(memberMatch.error.message);
+  }
+  return memberMatch.data;
 }
 
 export async function POST(request: NextRequest) {
@@ -73,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     const [team, question] = await Promise.all([
       getTeamForUser(user.id),
-      Promise.resolve(getQuestionByOrder(questionOrder)),
+      getRound4QuestionByOrder(questionOrder),
     ]);
 
     if (!team) {

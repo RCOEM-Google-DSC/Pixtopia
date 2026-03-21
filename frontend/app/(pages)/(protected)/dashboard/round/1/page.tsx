@@ -216,7 +216,7 @@ export default function Round1Page() {
 
   if (loading || (!gameState && roundStatus !== "locked")) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -224,7 +224,7 @@ export default function Round1Page() {
 
   if (submitting) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">
+      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex items-center justify-center text-white">
         <div className="text-center space-y-4">
           <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-zinc-400">Submitting your answers…</p>
@@ -236,7 +236,7 @@ export default function Round1Page() {
   if (submitted) {
     const correct = questions.filter((q) => answers[q.id] === q.correct_index).length;
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex flex-col py-10 px-4">
+      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 text-white flex flex-col py-10 px-4">
         <div className="max-w-3xl w-full mx-auto space-y-8">
           <div className="text-center space-y-4">
             <CheckCircle size={64} className="text-green-400 mx-auto" />
@@ -316,7 +316,7 @@ export default function Round1Page() {
 
   if (roundStatus === "locked") {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">
+      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex items-center justify-center text-white">
         <div className="text-center">
           <Lock size={48} className="text-zinc-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold">Round 1 is Locked</h2>
@@ -329,7 +329,7 @@ export default function Round1Page() {
 
   if (roundStatus === "completed") {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">
+      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex items-center justify-center text-white">
         <div className="text-center">
           <AlertCircle size={48} className="text-red-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold">Round 1 has ended</h2>
@@ -348,7 +348,7 @@ export default function Round1Page() {
   const isLastQ = currentQ === questions.length - 1;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+    <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 text-white flex flex-col">
       {/* Sticky header with server-derived progress */}
       <div className="sticky top-16 z-40 bg-zinc-900/90 backdrop-blur border-b border-zinc-800 px-6 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">

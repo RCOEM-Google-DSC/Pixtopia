@@ -267,7 +267,7 @@ export default function Round3Page() {
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading || teamLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col">
+      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex flex-col">
         <div className="p-8 space-y-8 max-w-5xl mx-auto w-full" data-testid="loading-state">
           <Skeleton className="h-12 w-3/4 bg-zinc-900" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -289,7 +289,7 @@ export default function Round3Page() {
     // And actually, I should also extract the fetched round score from the API response to render.
 
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col">
+      <div className="min-h-[calc(100vh-5rem)] bg-zinc-950 flex flex-col">
         <div
           className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center mt-12"
           data-testid="completed-state"

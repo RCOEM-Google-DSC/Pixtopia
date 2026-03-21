@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
-import DashboardNavbar from "@/app/Components/Navigation/DashboardNavbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -324,7 +323,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
+    <div className="relative min-h-[calc(100vh-5rem)] w-full overflow-hidden">
       {/* Background Image */}
       <div className="fixed inset-0 z-0 bg-[#aed4f4]">
         <Image
@@ -337,15 +336,13 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
         />
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col">
+      <div className="relative z-10 flex min-h-[calc(100vh-5rem)] flex-col">
         {/* Hidden eager preload tags for videos conceptually, but standard link preload */}
         <div className="hidden" aria-hidden="true">
           {allVideoUrls.map((url, idx) => (
              <link key={idx} rel="preload" as="video" href={url} />
           ))}
         </div>
-
-        <DashboardNavbar />
 
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 md:px-10 relative z-20">

@@ -4,9 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
-import DashboardNavbar from "@/app/Components/Navigation/DashboardNavbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -163,41 +161,47 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
     const currentPuzzle = puzzles[currentQIdx];
     if (!currentPuzzle) return;
     setSubmitting(true);
-    
-    toast.info("Skipped — moving on...");
-    const isAllDone = currentQIdx + 1 === puzzles.length;
-    
-    const updatedRS = {
-      ...roundState!,
-      [`q${currentPuzzle.order}_completed`]: true,
-      is_completed: isAllDone,
-    } as RoundState;
-    setRoundState(updatedRS);
+    setSubmitFeedback(null);
+    try {
+      const res = await fetch("/api/rounds/4/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          answer: "", 
+          questionOrder: currentPuzzle.order,
+          skipped: true 
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSubmitFeedback("skipped");
+        const updatedRS = {
+          ...roundState!,
+          [`q${currentPuzzle.order}_completed`]: true,
+          is_completed: data.allDone,
+        } as RoundState;
+        setRoundState(updatedRS);
 
-    if (isAllDone) {
-      setTimeout(() => setAllDone(true), 1200);
-    } else {
-      setTimeout(() => {
-        const nextIdx = currentQIdx + 1;
-        if (nextIdx < puzzles.length) {
-          setCurrentQIdx(nextIdx);
-          applyPuzzleState(puzzles[nextIdx], updatedRS);
+        if (data.allDone) {
+          setTimeout(() => setAllDone(true), 1200);
+        } else {
+          setTimeout(() => {
+            const nextIdx = currentQIdx + 1;
+            if (nextIdx < puzzles.length) {
+              setCurrentQIdx(nextIdx);
+              applyPuzzleState(puzzles[nextIdx], updatedRS);
+              setSubmitFeedback(null);
+            }
+          }, 1400);
         }
-      }, 1400);
+      } else {
+        setError(data.error || "Auto-skip failed");
+      }
+    } catch {
+      setError("Auto-skip failed");
+    } finally {
+      setSubmitting(false);
     }
-
-    // Background sync
-    fetch("/api/rounds/4/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        answer: "", 
-        questionOrder: currentPuzzle.order,
-        skipped: true 
-      }),
-    }).catch(console.error);
-
-    setSubmitting(false);
   };
 
   const currentPuzzle = puzzles[currentQIdx] ?? null;
@@ -220,74 +224,48 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
     !submitting &&
     !currentQCompleted;
 
-  const getNextHintCost = useCallback(() => {
-    let count = 0;
-    if (roundState) {
-      for (const key of Object.keys(roundState)) {
-        if (key.endsWith("_hints_revealed")) {
-          const qNumMatch = key.match(/^q(\d+)_/);
-          if (qNumMatch) {
-            const qNum = parseInt(qNumMatch[1], 10);
-            if (qNum <= 3) {
-              const val = (roundState as any)[key];
-              if (Array.isArray(val)) count += val.length;
-            }
-          }
-        }
-      }
-    }
-    const costs = [100, 110, 130];
-    return count < costs.length ? costs[count] : 130;
-  }, [roundState]);
-
   const handleSubmit = async () => {
     if (!canSubmit || !currentPuzzle) return;
     setSubmitting(true);
-
-    const { round4PartAQuestions } = await import("@/lib/round4PartAQuestions");
-    const qData = round4PartAQuestions.find((q) => q.order === currentPuzzle.order);
-    if (!qData) {
-      setSubmitting(false);
-      return;
-    }
-
-    const normalizeAnswer = (str: string) => str.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-    const isCorrect = normalizeAnswer(answer) === normalizeAnswer(qData.answer || "");
-
-    if (isCorrect) {
-      const isAllDone = currentQIdx + 1 === puzzles.length;
-      toast.success("Correct!", {
-        description: isAllDone ? "All puzzles solved!" : "Moving to next puzzle...",
-      });
-
-      const updatedRS = {
-        ...roundState!,
-        [`q${currentPuzzle.order}_completed`]: true,
-        is_completed: isAllDone,
-      } as RoundState;
-      setRoundState(updatedRS);
-
-      if (isAllDone) {
-        setTimeout(() => setAllDone(true), 1200);
-      } else {
-        setTimeout(() => {
-          const nextIdx = currentQIdx + 1;
-          setCurrentQIdx(nextIdx);
-          applyPuzzleState(puzzles[nextIdx], updatedRS);
-        }, 1400);
-      }
-
-      // Background Sync
-      fetch("/api/rounds/4/submit", {
+    setSubmitFeedback(null);
+    try {
+      const res = await fetch("/api/rounds/4/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answer: qData.answer, questionOrder: currentPuzzle.order }),
-      }).catch(console.error);
-    } else {
-      toast.error("Wrong answer", { description: "Look carefully at both images together." });
+        body: JSON.stringify({ answer, questionOrder: currentPuzzle.order }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSubmitFeedback("correct");
+        const updatedRS = {
+          ...roundState!,
+          [`q${currentPuzzle.order}_completed`]: true,
+          is_completed: data.allDone,
+        } as RoundState;
+        setRoundState(updatedRS);
+        if (data.allDone) {
+          setTimeout(() => setAllDone(true), 1200);
+        } else {
+          // Advance to the next puzzle after a brief success pause
+          setTimeout(() => {
+            const nextIdx = currentQIdx + 1;
+            if (nextIdx < puzzles.length) {
+              setCurrentQIdx(nextIdx);
+              applyPuzzleState(puzzles[nextIdx], updatedRS);
+              setSubmitFeedback(null);
+            }
+          }, 1400);
+        }
+      } else {
+        setSubmitFeedback("wrong");
+        setTimeout(() => setSubmitFeedback(null), 3000);
+      }
+    } catch {
+      setSubmitFeedback("wrong");
+      setTimeout(() => setSubmitFeedback(null), 3000);
+    } finally {
+      setSubmitting(false);
     }
-    
-    setSubmitting(false);
   };
 
   const handleAnswerChange = (newAnswer: string) => {
@@ -297,59 +275,41 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
 
   const handleHint = async () => {
     if (!currentPuzzle || currentQCompleted || availableHints === 0) return;
-
-    // 1. Instantly get the theoretical answer
-    const { round4PartAQuestions } = await import("@/lib/round4PartAQuestions");
-    const qData = round4PartAQuestions.find((q) => q.order === currentPuzzle.order);
-    if (!qData) return;
-
-    // 2. Pick a letter
-    const hintsRev: number[] =
-      (roundState?.[`q${currentPuzzle.order}_hints_revealed` as keyof RoundState] as number[]) || [];
-    const allIndices = Array.from({ length: qData.answer.length }, (_, i) => i);
-    let available = allIndices.filter((idx) => !hintsRev.includes(idx));
-
-    if (answer && answer.length === qData.answer.length) {
-      const filtered = available.filter(
-        (idx) => answer[idx].toLowerCase() !== qData.answer[idx].toLowerCase()
-      );
-      if (filtered.length > 0) available = filtered;
+    try {
+      const res = await fetch("/api/rounds/4/hint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentAnswer: answer,
+          questionOrder: currentPuzzle.order,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const newRevealed = [...revealedIndices, data.revealedIndex];
+        setRevealedIndices(newRevealed);
+        const arr = answer.split("");
+        while (arr.length < currentPuzzle.answer_length) arr.push(".");
+        arr[data.revealedIndex] = data.revealedChar;
+        setAnswer(arr.join(""));
+        setRoundState((prev) =>
+          prev
+            ? {
+                ...prev,
+                [`q${currentPuzzle.order}_hints_revealed`]: newRevealed,
+              }
+            : prev,
+        );
+      } else {
+        alert(data.error || "Failed to get hint");
+      }
+    } catch {
+      alert("Network error");
     }
-
-    if (available.length === 0) return;
-    const revealedIndex = available[Math.floor(Math.random() * available.length)];
-    const revealedChar = qData.answer[revealedIndex];
-
-    // 3. Update UI instantly
-    const newRevealed = [...hintsRev, revealedIndex];
-    setRevealedIndices(newRevealed);
-    
-    setAnswer((prev) => {
-      const arr = prev.split("");
-      while (arr.length < currentPuzzle.answer_length) arr.push(".");
-      arr[revealedIndex] = revealedChar;
-      return arr.join("");
-    });
-
-    setRoundState((prev) =>
-      prev
-        ? {
-            ...prev,
-            [`q${currentPuzzle.order}_hints_revealed`]: newRevealed,
-          }
-        : prev
-    );
-
-    // 4. Background Sync (no await)
-    fetch("/api/rounds/4/hint", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentAnswer: answer, questionOrder: currentPuzzle.order }),
-    }).catch(console.error);
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
+    <div className="relative min-h-[calc(100vh-5rem)] w-full overflow-hidden">
       {/* Background Image */}
       <div className="fixed inset-0 z-0 bg-[#aed4f4]">
         <Image
@@ -363,10 +323,20 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
       </div>
 
       {/* Content Overlay */}
-      <div className="relative z-10 flex min-h-screen flex-col">
-
-
-        <DashboardNavbar />
+      <div className="relative z-10 flex min-h-[calc(100vh-5rem)] flex-col">
+        {/* Hidden eager preload tags are SSR-rendered, so browser starts fetching all clues immediately. */}
+        <div className="hidden" aria-hidden="true">
+          {allPartAImageUrls.map((url, idx) => (
+            <img
+              key={`${url}-${idx}`}
+              src={url}
+              alt=""
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
+          ))}
+        </div>
 
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 md:px-10">
@@ -468,12 +438,11 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                       {loading ? (
                         <Skeleton className="h-full w-full" />
                       ) : currentPuzzle?.image_urls?.[0] ? (
-                        <img
+                        <Image
                           src={currentPuzzle.image_urls[0]}
                           alt="Clue 1"
-                          loading="eager"
-                          decoding="async"
-                          className="absolute inset-0 w-full h-full object-cover"
+                          fill                          sizes="(max-width: 768px) 100vw, 50vw"
+                          priority                          className="object-cover"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-white/50">
@@ -497,12 +466,11 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                       {loading ? (
                         <Skeleton className="h-full w-full" />
                       ) : currentPuzzle?.image_urls?.[1] ? (
-                        <img
+                        <Image
                           src={currentPuzzle.image_urls[1]}
                           alt="Clue 2"
-                          loading="eager"
-                          decoding="async"
-                          className="absolute inset-0 w-full h-full object-cover"
+                          fill                          sizes="(max-width: 768px) 100vw, 50vw"
+                          priority                          className="object-cover"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-white/50">
@@ -537,7 +505,45 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                     )}
                   </div>
 
-
+                  {/* Feedback Banners */}
+                  <AnimatePresence>
+                    {submitFeedback === "correct" && (
+                      <motion.div
+                        key="correct"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mx-auto flex w-full max-w-md items-center gap-3 rounded-xl border-2 border-emerald-400/50 bg-emerald-500/20 px-6 py-4 backdrop-blur-md shadow-lg"
+                      >
+                        <span className="text-2xl">✓</span>
+                        <div>
+                          <p className="font-bold text-emerald-300">Correct!</p>
+                          <p className="text-sm text-emerald-200/80">
+                            {currentQIdx + 1 < puzzles.length
+                              ? "Moving to next puzzle..."
+                              : "All puzzles solved!"}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                    {submitFeedback === "wrong" && (
+                      <motion.div
+                        key="wrong"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mx-auto flex w-full max-w-md items-center gap-3 rounded-xl border-2 border-red-400/50 bg-red-500/20 px-6 py-4 backdrop-blur-md shadow-lg"
+                      >
+                        <span className="text-2xl">✗</span>
+                        <div>
+                          <p className="font-bold text-red-300">Wrong answer</p>
+                          <p className="text-sm text-red-200/80">
+                            Look carefully at both images together.
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {/* Action Buttons Row */}
                   <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-6 px-4 mt-8">
@@ -548,19 +554,12 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                         size="lg"
                         onClick={handleHint}
                         disabled={submitting || loading || availableHints === 0}
-                        className="h-auto shrink-0 border-2 px-5 py-2 font-bold uppercase tracking-wider backdrop-blur-md shadow-lg transition-all duration-300 enabled:bg-white/25 enabled:border-white/40 enabled:text-white enabled:hover:bg-white/35 disabled:bg-black/30 disabled:border-black/20 disabled:text-white/40"
+                        className="h-12 shrink-0 border-2 border-white/40 bg-white/25 px-5 font-bold uppercase tracking-wider text-white backdrop-blur-md hover:bg-white/35 disabled:opacity-50 shadow-lg cursor-pointer"
                       >
-                        <div className="flex flex-col items-center">
-                          <div className="flex items-center">
-                            <span>💡 HINT</span>
-                            <Badge className="ml-2 bg-white/30 text-white border border-white/40">
-                              {availableHints} left
-                            </Badge>
-                          </div>
-                          <span className="text-xs opacity-90 mt-1 font-semibold bg-black/20 px-2 py-0.5 rounded-full">
-                            {getNextHintCost()} pts
-                          </span>
-                        </div>
+                        <span>💡 HINT</span>
+                        <Badge className="ml-2 bg-white/30 text-white border border-white/40">
+                          {availableHints}
+                        </Badge>
                       </Button>
                     ) : <div />}
 
@@ -570,7 +569,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                         size="lg"
                         onClick={handleSubmit}
                         disabled={!canSubmit}
-                        className="h-12 shrink-0 backdrop-blur-md border-2 px-8 font-black uppercase tracking-widest shadow-lg transition-all duration-300 enabled:bg-white/30 enabled:border-white/40 enabled:text-white enabled:hover:bg-white/40 disabled:bg-black/30 disabled:border-black/20 disabled:text-white/40"
+                        className="h-12 shrink-0 bg-white/30 backdrop-blur-md border-2 border-white/40 px-8 text-white font-black uppercase tracking-widest hover:bg-white/40 disabled:opacity-40 shadow-lg"
                       >
                         {submitting ? "..." : "SUBMIT"}
                       </Button>
