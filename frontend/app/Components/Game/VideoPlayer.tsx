@@ -58,9 +58,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Decorative Pixar-themed overlay */}
       <div className="absolute top-4 left-4 z-10">
         <div className="px-3 py-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-full">
-          <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
-            Clip Format: {isGif ? "GIF" : "MP4"}
-          </span>
+          
         </div>
       </div>
     </div>
