@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import ClientPage from "./ClientPage";
 
+export const dynamic = "force-dynamic";
+
 async function getInitialState() {
   const supabase = await createClient();
   const {

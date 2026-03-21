@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import ClientPage from "./ClientPage";
 
+export const dynamic = "force-dynamic";
+
 async function getInitialState() {
   const supabase = await createClient();
   const {
@@ -43,7 +45,9 @@ async function getInitialState() {
     await Promise.all([
       admin
         .from("questions")
-        .select("id, order, question, options, image_urls, video_url, answer, points, hint_cost")
+        .select(
+          "id, order, question, options, image_urls, video_url, answer, points, hint_cost",
+        )
         .eq("round_id", "4")
         .order("order", { ascending: true })
         .order("id", { ascending: false }),

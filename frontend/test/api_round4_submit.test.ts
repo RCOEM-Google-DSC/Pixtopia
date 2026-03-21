@@ -18,7 +18,7 @@ vi.mock('@/lib/supabase/server', () => ({
         return {
           select: vi.fn().mockReturnValue({
             or: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
+              maybeSingle: vi.fn().mockResolvedValue({
                 data: { id: 'mock-team-id', points: 500 },
                 error: null
               })
@@ -65,7 +65,7 @@ describe('POST /api/rounds/4/submit', () => {
   it('should return 200 and success if answer is correct', async () => {
     const request = new NextRequest('http://localhost:3000/api/rounds/4/submit', {
       method: 'POST',
-      body: JSON.stringify({ answer: 'GHOST' })
+      body: JSON.stringify({ answer: 'McQueen', questionOrder: 1 })
     });
     
     const response = await POST(request);
@@ -77,7 +77,7 @@ describe('POST /api/rounds/4/submit', () => {
   it('should return 400 if answer is incorrect', async () => {
     const request = new NextRequest('http://localhost:3000/api/rounds/4/submit', {
       method: 'POST',
-      body: JSON.stringify({ answer: 'WRONG' })
+      body: JSON.stringify({ answer: 'WRONG', questionOrder: 1 })
     });
     
     const response = await POST(request);

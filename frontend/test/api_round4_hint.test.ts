@@ -71,16 +71,16 @@ describe("POST /api/rounds/4/hint", () => {
   it("should return 200 and a new hint index", async () => {
     const request = new NextRequest("http://localhost:3000/api/rounds/4/hint", {
       method: "POST",
-      body: JSON.stringify({ currentAnswer: "G...." }), // Team already has 'G' revealed/typed
+      body: JSON.stringify({ currentAnswer: "M......", questionOrder: 1 }), // 'M' is at index 0
     });
 
     const response = await POST(request);
     expect(response.status).toBe(200);
     const data = await response.json();
 
-    // Cost for 2nd hint should be 20
-    expect(data.cost).toBe(20);
-    // Revealed index should be one of [1, 2, 3, 4] since 0 is already in hints_revealed
-    expect([1, 2, 3, 4]).toContain(data.revealedIndex);
+    // Global hints count = 1 ([0]), so next hint is the 2nd hint -> cost 110
+    expect(data.cost).toBe(110);
+    // Revealed index should be one of [1..6] since 0 is already in hints_revealed (for McQueen)
+    expect([1, 2, 3, 4, 5, 6]).toContain(data.revealedIndex);
   });
 });

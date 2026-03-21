@@ -1,50 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { unstable_cache } from "next/cache";
+import { round4PartAQuestions } from "@/lib/round4PartAQuestions";
+import { round4PartBQuestions } from "@/lib/round4PartB";
 
 const MAX_PART_A_HINTS = 3;
 
-const getRound4QuestionByOrder = unstable_cache(
-  async (order: number) => {
-    const admin = await createAdminClient();
-    const { data, error } = await admin
-      .from("questions")
-      .select("id, order, answer, hint, hint_cost")
-      .eq("round_id", "4")
-      .order("id", { ascending: false })
-      .limit(24);
-    if (error) throw new Error(error.message);
-    return (data ?? []).find((q) => q.order === order) ?? null;
-  },
-  ["round4-question-by-order"],
-  { revalidate: 300 },
-);
+function getQuestionByOrder(order: number) {
+  if (order <= 3) {
+    const q = round4PartAQuestions.find((q) => q.order === order);
+    return q ? { order: q.order, answer: q.answer, hint: q.hint } : null;
+  }
+  const q = round4PartBQuestions.find((q) => q.order === order);
+  return q ? { order: q.order, answer: undefined, hint: q.hint } : null;
+}
+
+function getNextHintCost(r4: any, questionOrder: number): number {
+  let count = 0;
+  const isPart1 = questionOrder <= 3;
+
+  if (r4) {
+    for (const key of Object.keys(r4)) {
+      if (key.endsWith("_hints_revealed")) {
+        // Extract the question number from "qX_hints_revealed"
+        const qNumMatch = key.match(/^q(\d+)_/);
+        if (qNumMatch) {
+          const qNum = parseInt(qNumMatch[1], 10);
+          const thisKeyIsPart1 = qNum <= 3;
+          if (isPart1 === thisKeyIsPart1) {
+            const val = r4[key];
+            if (Array.isArray(val)) count += val.length;
+            else if (val === true) count += 1;
+          }
+        }
+      }
+    }
+  }
+  const costs = [100, 110, 130];
+  return count < costs.length ? costs[count] : 130;
+}
 
 async function getTeamForUser(userId: string) {
   const admin = await createAdminClient();
 
-  // Fast path for most users: leader_id match.
-  const leaderMatch = await admin
+  const { data, error } = await admin
     .from("teams")
     .select("id, points")
-    .eq("leader_id", userId)
-    .maybeSingle();
-  if (leaderMatch.data) return leaderMatch.data;
-
-  // Fallback for non-leader members.
-  const memberMatch = await admin
-    .from("teams")
-    .select("id, points")
-    .contains("team_members_ids", [userId])
+    .or(`leader_id.eq.${userId},team_members_ids.cs.{"${userId}"}`)
     .maybeSingle();
 
-  if (leaderMatch.error && !memberMatch.data) {
-    throw new Error(leaderMatch.error.message);
+  if (error) {
+    throw new Error(error.message);
   }
-  if (memberMatch.error && !memberMatch.data) {
-    throw new Error(memberMatch.error.message);
-  }
-  return memberMatch.data;
+  return data;
 }
 
 export async function POST(request: NextRequest) {
@@ -69,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const [team, question] = await Promise.all([
       getTeamForUser(user.id),
-      getRound4QuestionByOrder(questionOrder),
+      Promise.resolve(getQuestionByOrder(questionOrder)),
     ]);
 
     if (!team) {
@@ -104,7 +111,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const cost = question.hint_cost || 10;
+      const cost = getNextHintCost(r4, questionOrder);
       if (team.points < cost) {
         return NextResponse.json(
           { error: "Insufficient points" },
@@ -164,7 +171,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const cost = 10 * (hintsRevealed.length + 1);
+      const cost = getNextHintCost(r4, questionOrder);
       if (team.points < cost) {
         return NextResponse.json(
           { error: "Insufficient points" },

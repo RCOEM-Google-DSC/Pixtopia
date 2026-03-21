@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import DashboardNavbar from "@/app/Components/Navigation/DashboardNavbar";
 import { Button } from "@/components/ui/button";
@@ -98,76 +99,6 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
     return questions.map(q => q.video_url).filter(Boolean);
   }, [questions]);
 
-  // Timer logic
-  useEffect(() => {
-    if (allDone || loading || submitting) return;
-    if (timeLeft <= 0) return;
-
-    const currentQuestion = questions[currentQIdx];
-    if (!currentQuestion) return;
-    const isCompleted = !!roundState?.[`q${currentQuestion.order}_completed` as keyof RoundState];
-    if (isCompleted) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSkip();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [currentQIdx, allDone, loading, submitting, questions, roundState]);
-
-  const handleSkip = async () => {
-    const currentQuestion = questions[currentQIdx];
-    if (!currentQuestion) return;
-    setSubmitting(true);
-    setSubmitFeedback(null);
-    try {
-      const res = await fetch("/api/rounds/4/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          answerIndex: -1, 
-          questionOrder: currentQuestion.order,
-          skipped: true 
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const updatedRS = {
-          ...roundState!,
-          [`q${currentQuestion.order}_completed`]: true,
-          is_completed: data.allDone,
-        } as RoundState;
-        setRoundState(updatedRS);
-
-        if (data.allDone) {
-          setAllDone(true);
-        } else {
-          const nextIdx = currentQIdx + 1;
-          if (nextIdx < questions.length) {
-            setCurrentQIdx(nextIdx);
-            setSelectedIndex(undefined);
-            setHintText(null);
-            setSubmitFeedback(null);
-            setTimeLeft(30);
-          }
-        }
-      } else {
-        setError(data.error || "Auto-skip failed");
-      }
-    } catch {
-      setError("Auto-skip failed");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const currentQuestion = questions[currentQIdx] ?? null;
   const currentQCompleted = currentQuestion
     ? !!(roundState?.[`q${currentQuestion.order}_completed` as keyof RoundState])
@@ -176,79 +107,220 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
   const currentHintRevealed = currentQuestion
     ? !!(roundState?.[`q${currentQuestion.order}_hints_revealed` as keyof RoundState])
     : false;
+
+  // Timer logic — auto-submit selected option on expiry, otherwise skip
+  const handleTimerExpiry = useCallback(() => {
+    if (selectedIndex !== undefined && currentQuestion && !submitting && !currentQCompleted) {
+      // Auto-submit the selected answer
+      (async () => {
+        setSubmitting(true);
+
+        const { round4PartBQuestions } = await import("@/lib/round4PartB");
+        const qData = round4PartBQuestions.find((q) => q.order === currentQuestion.order);
+        if (!qData) {
+          setSubmitting(false);
+          return;
+        }
+
+        const isCorrect = Number(selectedIndex) === qData.correct_index;
+
+        if (isCorrect) {
+          toast.success("Correct!");
+          const isAllDone = currentQIdx + 1 === questions.length;
+          
+          setRoundState(prev => prev ? { 
+            ...prev, 
+            [`q${currentQuestion.order}_completed`]: true,
+            is_completed: isAllDone 
+          } : null);
+
+          if (isAllDone) {
+            setTimeout(() => setAllDone(true), 1200);
+          } else {
+            setTimeout(() => {
+              const nextIdx = currentQIdx + 1;
+              if (nextIdx < questions.length) {
+                setCurrentQIdx(nextIdx);
+                setSelectedIndex(undefined);
+                setHintText(null);
+                setTimeLeft(30);
+              }
+            }, 1400);
+          }
+
+          fetch("/api/rounds/4/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ answerIndex: selectedIndex, questionOrder: currentQuestion.order }),
+          }).catch(console.error);
+
+        } else {
+          toast.error("Wrong answer");
+        }
+        
+        setSubmitting(false);
+      })();
+    } else {
+      handleSkip();
+    }
+  }, [selectedIndex, currentQuestion, submitting, currentQCompleted, currentQIdx, questions]);
+
+  useEffect(() => {
+    if (allDone || loading || submitting) return;
+    if (timeLeft <= 0) return;
+
+    const cq = questions[currentQIdx];
+    if (!cq) return;
+    const isCompleted = !!roundState?.[`q${cq.order}_completed` as keyof RoundState];
+    if (isCompleted) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleTimerExpiry();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [currentQIdx, allDone, loading, submitting, questions, roundState, handleTimerExpiry]);
+
+  const handleSkip = async () => {
+    const cq = questions[currentQIdx];
+    if (!cq) return;
+    setSubmitting(true);
+
+    const isAllDone = currentQIdx + 1 === questions.length;
+    const updatedRS = {
+      ...roundState!,
+      [`q${cq.order}_completed`]: true,
+      is_completed: isAllDone,
+    } as RoundState;
+    setRoundState(updatedRS);
+
+    if (isAllDone) {
+      setAllDone(true);
+    } else {
+      const nextIdx = currentQIdx + 1;
+      if (nextIdx < questions.length) {
+        setCurrentQIdx(nextIdx);
+        setSelectedIndex(undefined);
+        setHintText(null);
+        setTimeLeft(30);
+      }
+    }
+
+    fetch("/api/rounds/4/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        answerIndex: -1, 
+        questionOrder: cq.order,
+        skipped: true 
+      }),
+    }).catch(console.error);
+
+    setSubmitting(false);
+  };
   const optionsDisabled = submitting || loading || currentQCompleted;
+
+  const getNextHintCost = useCallback(() => {
+    let count = 0;
+    if (roundState) {
+      for (const key of Object.keys(roundState)) {
+        if (key.endsWith("_hints_revealed")) {
+          const qNumMatch = key.match(/^q(\d+)_/);
+          if (qNumMatch) {
+            const qNum = parseInt(qNumMatch[1], 10);
+            if (qNum >= 4) {
+              const val = (roundState as any)[key];
+              if (val === true) count += 1;
+            }
+          }
+        }
+      }
+    }
+    const costs = [100, 110, 130];
+    return count < costs.length ? costs[count] : 130;
+  }, [roundState]);
 
   const handleSubmit = async () => {
     if (selectedIndex === undefined || !currentQuestion || submitting || currentQCompleted) return;
     
     setSubmitting(true);
-    setSubmitFeedback(null);
-    try {
-      const res = await fetch("/api/rounds/4/submit", {
+
+    const { round4PartBQuestions } = await import("@/lib/round4PartB");
+    const qData = round4PartBQuestions.find((q) => q.order === currentQuestion.order);
+    if (!qData) {
+      setSubmitting(false);
+      return;
+    }
+
+    const isCorrect = Number(selectedIndex) === qData.correct_index;
+
+    if (isCorrect) {
+      toast.success("Correct!");
+      const isAllDone = currentQIdx + 1 === questions.length;
+      
+      setRoundState(prev => prev ? { 
+        ...prev, 
+        [`q${currentQuestion.order}_completed`]: true,
+        is_completed: isAllDone 
+      } : null);
+
+      if (isAllDone) {
+        setTimeout(() => setAllDone(true), 1200);
+      } else {
+        setTimeout(() => {
+          const nextIdx = currentQIdx + 1;
+          if (nextIdx < questions.length) {
+            setCurrentQIdx(nextIdx);
+            setSelectedIndex(undefined);
+            setHintText(null);
+            setSubmitFeedback(null);
+            setTimeLeft(30);
+          }
+        }, 1400);
+      }
+
+      // Background Sync
+      fetch("/api/rounds/4/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answerIndex: selectedIndex, questionOrder: currentQuestion.order }),
-      });
-      const data = await res.json();
-      
-      if (res.ok) {
-        setSubmitFeedback("correct");
-        setRoundState(prev => prev ? { 
-          ...prev, 
-          [`q${currentQuestion.order}_completed`]: true,
-          is_completed: data.allDone 
-        } : null);
+      }).catch(console.error);
 
-        if (data.allDone) {
-          setTimeout(() => setAllDone(true), 1200);
-        } else {
-          setTimeout(() => {
-            const nextIdx = currentQIdx + 1;
-            if (nextIdx < questions.length) {
-              setCurrentQIdx(nextIdx);
-              setSelectedIndex(undefined);
-              setHintText(null);
-              setSubmitFeedback(null);
-              setTimeLeft(30);
-            }
-          }, 1400);
-        }
-      } else {
-        setSubmitFeedback("wrong");
-        setTimeout(() => setSubmitFeedback(null), 3000);
-      }
-    } catch {
-      setSubmitFeedback("wrong");
-      setTimeout(() => setSubmitFeedback(null), 3000);
-    } finally {
-      setSubmitting(false);
+    } else {
+      toast.error("Wrong answer");
     }
+    
+    setSubmitting(false);
   };
 
   const handleHint = async () => {
     if (!currentQuestion || currentQCompleted || submitting || currentHintRevealed) return;
     
-    try {
-      const res = await fetch("/api/rounds/4/hint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionOrder: currentQuestion.order }),
-      });
-      const data = await res.json();
-      
-      if (res.ok) {
-        setHintText(data.hint);
-        setRoundState(prev => prev ? { 
-          ...prev, 
-          [`q${currentQuestion.order}_hints_revealed`]: true,
-          points_spent: (prev.points_spent || 0) + (data.cost || 0)
-        } : null);
-      } else {
-        alert(data.error || "Failed to get hint");
-      }
-    } catch {
-      alert("Network error");
-    }
+    // 1. Instantly get the static answer data
+    const { round4PartBQuestions } = await import("@/lib/round4PartB");
+    const qData = round4PartBQuestions.find(q => q.order === currentQuestion.order);
+    if (!qData) return;
+
+    // 2. Instantly update UI
+    setHintText(qData.hint);
+    setRoundState(prev => prev ? { 
+      ...prev, 
+      [`q${currentQuestion.order}_hints_revealed`]: true,
+    } : null);
+
+    // 3. Background Sync (no await)
+    fetch("/api/rounds/4/hint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionOrder: currentQuestion.order }),
+    }).catch(console.error);
   };
 
   return (
@@ -346,20 +418,21 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                         PHASE B - VIDEO
                       </Badge>
                     </div>
-
-                    {!allDone && !currentQCompleted && (
-                      <div className="flex items-center gap-2 rounded-full border-2 border-white/40 bg-black/40 px-5 py-2 backdrop-blur-md shadow-lg">
-                        <span className="text-sm font-bold uppercase tracking-widest text-zinc-300">Time</span>
-                        <span className={`text-2xl font-black tabular-nums transition-colors ${timeLeft <= 10 ? "text-red-400 animate-pulse" : "text-white"}`}>
-                          00:{timeLeft.toString().padStart(2, "0")}
-                        </span>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Top: Video Player in a glassy card */}
-                  <div className="w-full mx-auto max-w-3xl">
-                     <Card className="relative overflow-hidden border-4 border-white/40 bg-black/50 p-2 backdrop-blur-sm shadow-2xl rounded-2xl flex items-center justify-center min-h-[300px]">
+                  {/* Video Player + Timer positioned above top-right of clip (matching Part 1) */}
+                  <div className="w-full mx-auto max-w-3xl relative">
+                    {!allDone && !currentQCompleted && (
+                      <div className="flex justify-end mb-3">
+                        <div className="flex items-center gap-2 rounded-full border-2 border-white/40 bg-black/40 px-5 py-2 backdrop-blur-md shadow-lg">
+                          <span className="text-sm font-bold uppercase tracking-widest text-zinc-300">Time</span>
+                          <span className={`text-2xl font-black tabular-nums transition-colors ${timeLeft <= 10 ? "text-red-400 animate-pulse" : "text-white"}`}>
+                            00:{timeLeft.toString().padStart(2, "0")}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <Card className="relative overflow-hidden border-4 border-white/40 bg-black/50 p-2 backdrop-blur-sm shadow-2xl rounded-2xl flex items-center justify-center min-h-[300px]">
                       {loading ? (
                         <Skeleton className="h-full w-full absolute inset-0" />
                       ) : (
@@ -399,37 +472,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                     />
                   </div>
 
-                  {/* Feedback Banners */}
-                  <AnimatePresence>
-                    {submitFeedback === "correct" && (
-                      <motion.div
-                        key="correct"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="mx-auto flex w-full max-w-md items-center gap-3 rounded-xl border-2 border-emerald-400/50 bg-emerald-500/20 px-6 py-4 backdrop-blur-md shadow-lg mt-4"
-                      >
-                        <span className="text-2xl">✓</span>
-                        <div>
-                          <p className="font-bold text-emerald-300">Correct!</p>
-                        </div>
-                      </motion.div>
-                    )}
-                    {submitFeedback === "wrong" && (
-                      <motion.div
-                        key="wrong"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="mx-auto flex w-full max-w-md items-center gap-3 rounded-xl border-2 border-red-400/50 bg-red-500/20 px-6 py-4 backdrop-blur-md shadow-lg mt-4"
-                      >
-                        <span className="text-2xl">✗</span>
-                        <div>
-                          <p className="font-bold text-red-300">Wrong answer</p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+
 
                   {/* Action Buttons Row */}
                   <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-6 px-4 mt-8 pb-10 pointer-events-auto">
@@ -439,12 +482,19 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                         size="lg"
                         onClick={handleHint}
                         disabled={submitting || loading || currentHintRevealed}
-                        className="h-12 shrink-0 border-2 border-white/40 bg-white/25 px-5 font-bold uppercase tracking-wider text-white backdrop-blur-md hover:bg-white/35 disabled:opacity-50 shadow-lg cursor-pointer"
+                        className="h-auto shrink-0 border-2 px-5 py-2 font-bold uppercase tracking-wider backdrop-blur-md shadow-lg transition-all duration-300 enabled:bg-white/25 enabled:border-white/40 enabled:text-white enabled:hover:bg-white/35 disabled:bg-black/30 disabled:border-black/20 disabled:text-white/40"
                       >
-                        <span>💡 HINT</span>
-                        <Badge className="ml-2 bg-white/30 text-white border border-white/40">
-                          {currentHintRevealed ? 0 : 2}
-                        </Badge>
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center">
+                            <span>💡 HINT</span>
+                            <Badge className="ml-2 bg-white/30 text-white border border-white/40">
+                              {currentHintRevealed ? 0 : 1} left
+                            </Badge>
+                          </div>
+                          <span className="text-xs opacity-90 mt-1 font-semibold bg-black/20 px-2 py-0.5 rounded-full">
+                            {getNextHintCost()} pts
+                          </span>
+                        </div>
                       </Button>
                     ) : <div />}
 
@@ -453,7 +503,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                         size="lg"
                         onClick={handleSubmit}
                         disabled={selectedIndex === undefined || submitting}
-                        className="h-12 shrink-0 bg-white/30 backdrop-blur-md border-2 border-white/40 px-8 text-white font-black uppercase tracking-widest hover:bg-white/40 disabled:opacity-40 shadow-lg"
+                        className="h-12 shrink-0 backdrop-blur-md border-2 px-8 font-black uppercase tracking-widest shadow-lg transition-all duration-300 enabled:bg-white/30 enabled:border-white/40 enabled:text-white enabled:hover:bg-white/40 disabled:bg-black/30 disabled:border-black/20 disabled:text-white/40"
                       >
                         {submitting ? "..." : "SUBMIT"}
                       </Button>

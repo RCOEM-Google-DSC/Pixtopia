@@ -23,28 +23,16 @@ const getRound4Questions = unstable_cache(
 async function getTeamForUser(userId: string) {
   const admin = await createAdminClient();
 
-  // Fast path for most users: leader_id match.
-  const leaderMatch = await admin
+  const { data, error } = await admin
     .from("teams")
     .select("id, points")
-    .eq("leader_id", userId)
-    .maybeSingle();
-  if (leaderMatch.data) return leaderMatch.data;
-
-  // Fallback for non-leader members.
-  const memberMatch = await admin
-    .from("teams")
-    .select("id, points")
-    .contains("team_members_ids", [userId])
+    .or(`leader_id.eq.${userId},team_members_ids.cs.{"${userId}"}`)
     .maybeSingle();
 
-  if (leaderMatch.error && !memberMatch.data) {
-    throw new Error(leaderMatch.error.message);
+  if (error) {
+    throw new Error(error.message);
   }
-  if (memberMatch.error && !memberMatch.data) {
-    throw new Error(memberMatch.error.message);
-  }
-  return memberMatch.data;
+  return data;
 }
 
 export async function GET(_request: NextRequest) {

@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import { Play } from "lucide-react";
 
 interface VideoPlayerProps {
@@ -10,6 +9,11 @@ interface VideoPlayerProps {
   className?: string;
 }
 
+/**
+ * Renders video clips (mp4, webm) and animated images (gif) with proper
+ * format detection. SSR-safe: renders the correct HTML element on the
+ * server so hydration is instant without layout shift.
+ */
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   src,
   poster,
@@ -26,13 +30,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  const isGif = src.toLowerCase().endsWith(".gif") || src.includes("tenor.com");
+  const lowerSrc = src.toLowerCase();
+  const isGif =
+    lowerSrc.endsWith(".gif") ||
+    src.includes("tenor.com") ||
+    src.includes("giphy.com");
+  const isWebm = lowerSrc.endsWith(".webm");
+
+  // Determine MIME type for <source> tags
+  const getMimeType = () => {
+    if (isWebm) return "video/webm";
+    if (lowerSrc.endsWith(".mp4")) return "video/mp4";
+    if (lowerSrc.endsWith(".ogg") || lowerSrc.endsWith(".ogv")) return "video/ogg";
+    return "video/mp4"; // fallback
+  };
 
   return (
     <div className={`relative group bg-black rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 aspect-video ${className}`}>
       {isGif ? (
         <div className="relative w-full h-full flex items-center justify-center">
-          {/* Using standard img instead of next/image for external GIFs to avoid ORB issues */}
+          {/* Using standard img for external GIFs — Next.js Image doesn't support animated GIFs well */}
           <img
             src={src}
             alt="Challenge Clip"
@@ -43,24 +60,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       ) : (
         <video
           data-testid="video-player"
-          src={src}
           poster={poster}
           controls
           className="w-full h-full object-contain"
           autoPlay
           muted
           loop
+          playsInline
+          preload="auto"
         >
+          <source src={src} type={getMimeType()} />
+          {/* Fallback: if webm, also try mp4 variant */}
+          {isWebm && (
+            <source src={src.replace(/\.webm$/i, ".mp4")} type="video/mp4" />
+          )}
           Your browser does not support the video tag.
         </video>
       )}
-      
-      {/* Decorative Pixar-themed overlay */}
-      <div className="absolute top-4 left-4 z-10">
-        <div className="px-3 py-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-full">
-          
-        </div>
-      </div>
     </div>
   );
 };
