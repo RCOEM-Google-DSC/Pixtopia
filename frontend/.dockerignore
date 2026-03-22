@@ -1,0 +1,15 @@
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+.next
+.git
+.gitignore
+.env*
+coverage
+test
+scripts
+README.md
+LICENSE
+conductor/
+*.md

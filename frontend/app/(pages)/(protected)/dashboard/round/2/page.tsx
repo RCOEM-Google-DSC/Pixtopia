@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { subscribeToGameState } from "@/lib/database";
 import { createClient } from "@/lib/supabase/client";
-import { ExternalLink, Code2, Trophy, Lock } from "lucide-react";
+import { ExternalLink, Lock, AlertCircle } from "lucide-react";
 
 export default function Round2Page() {
   const router = useRouter();
@@ -49,87 +49,119 @@ export default function Round2Page() {
   }, [user?.id]);
 
   const scores = [
-    { label: "Easy", count: 3, each: 200, color: "text-emerald-400" },
-    { label: "Medium", count: 2, each: 400, color: "text-amber-400" },
-    { label: "Hard", count: 1, each: 900, color: "text-rose-400" },
+    { label: "Easy", count: 3, each: 200, color: "text-[#00FA9A]" },
+    { label: "Medium", count: 2, each: 400, color: "text-[#FF5F1F]" },
+    { label: "Hard", count: 2, each: 900, color: "text-[#ED1C24]" },
   ];
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-lg space-y-6">
-        {/* Header card */}
-        <div className="relative bg-zinc-900/60 border border-cyan-500/30 rounded-2xl p-8 overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl" />
-          <div className="relative space-y-3">
-            <div className="flex items-center gap-2 text-cyan-400">
-              <Code2 size={20} />
-              <span className="text-sm font-semibold uppercase tracking-wider">Round 2</span>
-            </div>
-            <h1 className="text-3xl font-extrabold">Competitive Programming</h1>
-            <p className="text-zinc-400 text-sm">
-              Solve Pixar-themed coding problems on HackerRank. Scores are tracked automatically.
-            </p>
+  const total = scores.reduce((sum, s) => sum + s.each * s.count, 0);
 
-            {/* Score breakdown */}
-            <div className="mt-6 space-y-3">
-              <p className="text-xs font-medium text-zinc-500 uppercase tracking-widest">Score Breakdown</p>
-              {scores.map((s) => (
-                <div key={s.label} className="flex items-center justify-between bg-zinc-800/50 rounded-xl px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`font-bold ${s.color}`}>{s.label}</span>
-                    <span className="text-zinc-500 text-sm">× {s.count} questions</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-bold ${s.color}`}>{s.each * s.count} GC</span>
-                    <span className="text-zinc-600 text-xs ml-1">({s.each} each)</span>
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center justify-between bg-zinc-800 rounded-xl px-4 py-3 border border-zinc-700">
-                <div className="flex items-center gap-2">
-                  <Trophy size={16} className="text-yellow-400" />
-                  <span className="font-bold text-white">Total</span>
-                </div>
-                <span className="font-black text-yellow-400 text-lg">2300 GC</span>
+  // ── Locked state ──────────────────────────────────────────────────────────
+  if (status === "locked") {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <div className="text-center">
+          <Lock size={36} className="text-zinc-600 mx-auto mb-4" />
+          <h2 className="text-xl font-bold tracking-wide">ROUND 2 LOCKED</h2>
+          <p className="text-zinc-500 text-sm mt-2">Waiting for the admin to start this round.</p>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="mt-6 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 rounded-lg text-sm tracking-wide transition-colors"
+          >
+            ← Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Completed state ───────────────────────────────────────────────────────
+  if (status === "completed") {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <div className="text-center">
+          <AlertCircle size={36} className="text-zinc-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold tracking-wide">ROUND 2 ENDED</h2>
+          <p className="text-zinc-500 text-sm mt-2">Submissions are closed.</p>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="mt-6 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 rounded-lg text-sm tracking-wide transition-colors"
+          >
+            ← Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Active state ──────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
+      <div className="w-full max-w-2xl space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-3">
+          <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
+            Round 2
+          </span>
+          <h1 className="text-2xl font-bold tracking-wide">COMPETITIVE PROGRAMMING</h1>
+          <p className="text-zinc-500 text-sm">
+            Solve Pixar-themed coding problems on HackerRank. Scores are tracked automatically.
+          </p>
+        </div>
+
+        {/* Score breakdown */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4">
+            Score Breakdown
+          </h2>
+          {scores.map((s) => (
+            <div
+              key={s.label}
+              className="flex items-center justify-between p-4 rounded-lg border border-zinc-800 bg-zinc-900/40"
+            >
+              <div className="flex items-center gap-2">
+                <span className={`font-bold ${s.color}`}>{s.label}</span>
+                <span className="text-zinc-500 text-sm">× {s.count} questions</span>
+              </div>
+              <div className="text-right">
+                <span className={`font-bold ${s.color}`}>{s.each * s.count} GC</span>
+                <span className="text-zinc-600 text-xs ml-1">({s.each} each)</span>
               </div>
             </div>
+          ))}
 
-            {/* CTA */}
-            <div className="pt-4">
-              {status === "locked" ? (
-                <div className="flex items-center gap-3 bg-zinc-800/80 rounded-xl px-5 py-4 border border-zinc-700">
-                  <Lock size={20} className="text-zinc-500" />
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-300">Round Not Started</p>
-                    <p className="text-xs text-zinc-500">Admin will share the contest link when ready.</p>
-                  </div>
-                </div>
-              ) : (
-                <a
-                  href={contestUrl || "https://www.hackerrank.com"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 rounded-xl font-bold text-sm transition-all"
-                >
-                  Open HackerRank Contest <ExternalLink size={16} />
-                </a>
-              )}
-            </div>
-
-            <p className="text-xs text-zinc-600 text-center pt-2">
-              Scores for this round will be imported automatically after the contest ends.
-            </p>
+          {/* Total */}
+          <div className="flex items-center justify-between p-4 rounded-lg border border-zinc-700 bg-zinc-900/60">
+            <span className="font-bold text-white">Total</span>
+            <span className="font-black text-amber-400 text-lg">{total} GC</span>
           </div>
         </div>
 
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="w-full py-2.5 text-sm text-zinc-400 hover:text-white transition-colors"
-        >
-          ← Back to Dashboard
-        </button>
+        {/* CTA */}
+        <div className="text-center space-y-4">
+          <a
+            href={contestUrl || "https://www.hackerrank.com"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 bg-white hover:bg-zinc-200 text-black px-8 py-3 text-sm tracking-widest font-bold uppercase rounded-lg transition-all"
+          >
+            Open HackerRank Contest <ExternalLink size={16} />
+          </a>
+          <p className="text-xs text-zinc-600">
+            Scores for this round will be imported automatically after the contest ends.
+          </p>
+        </div>
+
+        {/* Back button */}
+        <div className="text-center">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="mt-2 mb-8 border border-zinc-700 hover:border-zinc-500 text-white px-8 py-3 text-sm tracking-[0.2em] uppercase rounded-lg transition-all"
+          >
+            Back to Dashboard
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-
