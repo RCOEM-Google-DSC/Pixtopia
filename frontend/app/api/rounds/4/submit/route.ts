@@ -129,24 +129,27 @@ export async function POST(request: NextRequest) {
     }
 
     const { answer, answerIndex, questionOrder = 1, skipped = false } = body;
-    if (!skipped) {
-      if (
-        questionOrder < 1 ||
-        (questionOrder > 3 && answerIndex === undefined)
-      ) {
-        if (!answer && answerIndex === undefined) {
-          return NextResponse.json(
-            { error: "Answer is required" },
-            { status: 400 },
-          );
-        }
-      }
-    }
-    if (questionOrder < 1 || questionOrder > 6) {
+    
+    // Validate questionOrder range (Part A: 1-7, Part B: 8-10)
+    if (questionOrder < 1 || questionOrder > 10) {
       return NextResponse.json(
         { error: "Invalid questionOrder" },
         { status: 400 },
       );
+    }
+
+    // Only validate answer/answerIndex when not skipped
+    if (!skipped) {
+      if (questionOrder >= 8) {
+        // Part B: MCQ - requires answerIndex
+        if (answerIndex === undefined) {
+          return NextResponse.json(
+            { error: "Answer index is required" },
+            { status: 400 },
+          );
+        }
+      }
+      // Part A: answer can be empty (will just be marked wrong)
     }
 
     const user = await getSessionUser();
@@ -172,38 +175,17 @@ export async function POST(request: NextRequest) {
 
     const admin = await createAdminClient();
 
-    // Validate answer based on question type
+    // Check if answer is correct (only award points if correct, not case sensitive)
+    let isCorrect = false;
     if (!skipped) {
-      if (questionOrder >= 4) {
+      if (questionOrder >= 8) {
         // Part B: MCQ
-        if (answerIndex === undefined) {
-          return NextResponse.json(
-            { error: "Answer index is required" },
-            { status: 400 },
-          );
-        }
-        if (Number(answerIndex) !== question.correct_index) {
-          return NextResponse.json(
-            { error: "Incorrect answer" },
-            { status: 400 },
-          );
-        }
+        isCorrect = Number(answerIndex) === question.correct_index;
       } else {
-        // Part A: Visual Puzzle
-        if (!answer) {
-          return NextResponse.json(
-            { error: "Answer is required" },
-            { status: 400 },
-          );
-        }
-        if (
-          normalizeAnswer(answer) !== normalizeAnswer(question.answer || "")
-        ) {
-          return NextResponse.json(
-            { error: "Incorrect answer" },
-            { status: 400 },
-          );
-        }
+        // Part A: Visual Puzzle - case insensitive comparison
+        const userAnswer = normalizeAnswer(answer || "");
+        const correctAnswer = normalizeAnswer(question.answer || "");
+        isCorrect = userAnswer.length > 0 && userAnswer === correctAnswer;
       }
     }
 
@@ -221,16 +203,22 @@ export async function POST(request: NextRequest) {
     if (r4[qCompletedKey]) {
       return NextResponse.json({
         success: true,
+        correct: false,
         pointsAdded: 0,
         alreadyCompleted: true,
         allDone: r4.is_completed || false,
       });
     }
 
-    // Check if all questions (1-6) are completed
-    const allDone = [1, 2, 3, 4, 5, 6].every((n) =>
+    // Check if all questions (1-7 for Part A, 8-10 for Part B) are completed
+    // Part A: questions 1-7, Part B: questions 8-10
+    const allPartADone = [1, 2, 3, 4, 5, 6, 7].every((n) =>
       n === questionOrder ? true : !!r4[`q${n}_completed`],
     );
+    const allPartBDone = [8, 9, 10].every((n) =>
+      n === questionOrder ? true : !!r4[`q${n}_completed`],
+    );
+    const allDone = allPartADone && allPartBDone;
 
     const updatedRound4 = {
       ...r4,
@@ -239,8 +227,8 @@ export async function POST(request: NextRequest) {
       submitted_at: new Date().toISOString(),
     };
 
-    // Award points only if not skipped
-    const pointsToAdd = skipped ? 0 : question.points || 0;
+    // Award points ONLY if correct (not skipped and answer matches)
+    const pointsToAdd = isCorrect ? (question.points || 0) : 0;
     const { error: teamUpdateError } = await admin
       .from("teams")
       .update({ points: team.points + pointsToAdd })
@@ -268,6 +256,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      correct: isCorrect,
       pointsAdded: pointsToAdd,
       newBalance: team.points + pointsToAdd,
       allDone,

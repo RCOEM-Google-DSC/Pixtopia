@@ -457,15 +457,6 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
             <span className="font-bold uppercase tracking-wider">EXIT</span>
           </Button>
 
-          <div className="flex items-center gap-2">
-            <Image
-              src="/gdg.svg"
-              alt="Google Developer Groups"
-              width={120}
-              height={32}
-              className="h-8 w-auto"
-            />
-          </div>
 
           {/* <Badge
             variant="outline"
@@ -484,7 +475,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                 <span className="text-2xl font-black text-white drop-shadow-lg">
                   Q{currentPuzzle?.order || 1}/{Math.max(1, puzzles.length)}
                 </span>
-                <Badge className="bg-white/30 text-white border border-white/40 font-bold uppercase tracking-wider">
+                <Badge className="p-3 bg-black/40 border-white/40 hover:bg-white/20 hover:border-white/60 font-bold uppercase tracking-wider">
                   PHASE A - IMAGES
                 </Badge>
               </div>
@@ -509,14 +500,13 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                   className="flex flex-col items-center gap-6 rounded-2xl bg-white/20 border-2 border-white/40 p-12 backdrop-blur-md shadow-2xl"
                 >
                   <div className="text-6xl">🎉</div>
-                  <div className="flex items-center gap-2 text-2xl font-black uppercase tracking-wider text-emerald-300">
-                    <div className="h-3 w-3 animate-pulse rounded-full bg-emerald-300" />
+                  <div className="flex items-center gap-2 text-2xl font-black uppercase tracking-wider text-black">
                     All Puzzles Solved!
                   </div>
                   <Button
                     size="lg"
                     onClick={() => router.push("/dashboard/round/4/part2")}
-                    className="bg-white/30 border-2 border-white/40 backdrop-blur-md px-10 py-6 text-lg font-black uppercase tracking-widest text-white hover:bg-white/40 shadow-lg"
+                    className="bg-black/40 border-white/40 hover:bg-white/20 hover:border-white/60 backdrop-blur-md px-10 py-6 text-lg font-black uppercase tracking-widest text-white hover:bg-white/40 shadow-lg"
                   >
                     Enter Round 4 Part B →
                   </Button>
@@ -652,7 +642,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                         <div>
                           <p className="font-bold text-red-300">Wrong answer</p>
                           <p className="text-sm text-red-200/80">
-                            Look carefully at both images together.
+                            Better luck next time 
                           </p>
                         </div>
                       </motion.div>

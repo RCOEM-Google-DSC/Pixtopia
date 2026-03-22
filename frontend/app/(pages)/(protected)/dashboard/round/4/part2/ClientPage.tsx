@@ -310,27 +310,6 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
         </div>
 
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 md:px-10 relative z-20">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/dashboard")}
-            className="gap-2 text-white/90 hover:bg-white/10 hover:text-white"
-          >
-            <ArrowLeft className="size-4" />
-            <span className="font-bold uppercase tracking-wider">EXIT</span>
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <Image
-              src="/gdg.svg"
-              alt="Google Developer Groups"
-              width={120}
-              height={32}
-              className="h-8 w-auto"
-            />
-          </div>
-        </header>
 
         {/* Main Content */}
         <main className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-8 relative z-20">
@@ -375,7 +354,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                       <span className="text-2xl font-black text-white drop-shadow-lg">
                         Q{currentQuestion?.order || 8}/{Math.max(1, questions.length) + 7}
                       </span>
-                      <Badge className="bg-white/30 text-white border border-white/40 font-bold uppercase tracking-wider">
+                      <Badge className="p-3 bg-black/40 border-white/40 hover:bg-white/20 hover:border-white/60 font-bold uppercase tracking-wider">
                         PHASE B - VIDEO
                       </Badge>
                     </div>
