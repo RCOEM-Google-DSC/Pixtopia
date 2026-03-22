@@ -14,9 +14,21 @@ function parseLine(line) {
   let cur = "";
   let inQ = false;
   for (let i = 0; i < line.length; i++) {
-    if (line[i] === '"') { inQ = !inQ; }
-    else if (line[i] === "," && !inQ) { fields.push(cur.trim()); cur = ""; }
-    else { cur += line[i]; }
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i + 1] === '"') {
+        // Escaped quote ("") → literal "
+        cur += '"';
+        i++; // skip next quote
+      } else {
+        inQ = !inQ;
+      }
+    } else if (ch === "," && !inQ) {
+      fields.push(cur.trim());
+      cur = "";
+    } else {
+      cur += ch;
+    }
   }
   fields.push(cur.trim());
   return fields;

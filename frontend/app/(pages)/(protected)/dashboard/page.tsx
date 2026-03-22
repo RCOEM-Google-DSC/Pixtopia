@@ -9,6 +9,7 @@ import {
   GameState, RoundStatus,
 } from "@/lib/database";
 import { RefreshCw, Loader2 } from "lucide-react";
+import SiteNavbar from "@/app/Components/Navigation/DashboardNavbar";
 import svgPaths from "@/lib/cardSvgPaths";
 
 /* ─── card image paths (from card repo assets) ─── */
@@ -447,6 +448,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen relative text-white overflow-hidden bg-black" style={{ fontFamily: "'Brandon Grotesque', sans-serif" }}>
+      <SiteNavbar />
       {/* ─── Content ─── */}
       <div className="relative z-10">
         {/* Team Name */}

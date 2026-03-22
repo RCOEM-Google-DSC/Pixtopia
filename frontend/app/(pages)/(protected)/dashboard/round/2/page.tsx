@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/authContext";
 import { subscribeToGameState } from "@/lib/database";
 import { createClient } from "@/lib/supabase/client";
 import { ExternalLink, Lock, AlertCircle } from "lucide-react";
+import SiteNavbar from "@/app/Components/Navigation/DashboardNavbar";
 
 export default function Round2Page() {
   const router = useRouter();
@@ -60,6 +61,7 @@ export default function Round2Page() {
   if (status === "locked") {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <SiteNavbar />
         <div className="text-center">
           <Lock size={36} className="text-zinc-600 mx-auto mb-4" />
           <h2 className="text-xl font-bold tracking-wide">ROUND 2 LOCKED</h2>
@@ -79,6 +81,7 @@ export default function Round2Page() {
   if (status === "completed") {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <SiteNavbar />
         <div className="text-center">
           <AlertCircle size={36} className="text-zinc-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold tracking-wide">ROUND 2 ENDED</h2>
@@ -97,6 +100,7 @@ export default function Round2Page() {
   // ── Active state ──────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
+      <SiteNavbar />
       <div className="w-full max-w-2xl space-y-8">
         {/* Header */}
         <div className="text-center space-y-3">
