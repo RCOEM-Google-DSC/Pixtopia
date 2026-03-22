@@ -1,52 +1,122 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, createAdminClient } from "@/lib/supabase/server";
-import { unstable_cache } from "next/cache";
 
-const getRound4QuestionByOrder = unstable_cache(
-  async (order: number) => {
+// Retry helper for transient network failures
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+  delayMs = 500
+): Promise<T> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+      const msg = err?.message?.toLowerCase() || "";
+      const isTransient =
+        msg.includes("fetch failed") ||
+        msg.includes("timeout") ||
+        msg.includes("network") ||
+        msg.includes("aborted") ||
+        msg.includes("econnrefused");
+      if (!isTransient || attempt === maxAttempts) {
+        throw err;
+      }
+      // Exponential backoff
+      await new Promise((r) => setTimeout(r, delayMs * Math.pow(2, attempt - 1)));
+    }
+  }
+  throw lastError;
+}
+
+// In-memory cache for questions (avoids caching failures)
+let questionsCache: { data: any[] | null; timestamp: number } = {
+  data: null,
+  timestamp: 0,
+};
+const CACHE_TTL = 300000; // 5 minutes
+
+async function getRound4QuestionByOrder(order: number) {
+  const now = Date.now();
+  
+  // Use cache if valid
+  if (questionsCache.data && now - questionsCache.timestamp < CACHE_TTL) {
+    return questionsCache.data.find((q) => q.question_order === order) ?? null;
+  }
+
+  // Fetch with retry - error check INSIDE retry wrapper
+  const data = await withRetry(async () => {
     const admin = await createAdminClient();
-    const { data, error } = await admin
+    const result = await admin
       .from("questions")
       .select("id, question_order, answer, correct_index, points")
       .eq("round_id", "4")
       .order("id", { ascending: false })
       .limit(24);
-    if (error) throw new Error(error.message);
-    return (data ?? []).find((q) => q.question_order === order) ?? null;
-  },
-  ["round4-submit-question-by-order"],
-  { revalidate: 300 },
-);
+
+    // Throw inside retry so network errors get retried
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    return result.data;
+  });
+  
+  // Cache successful result
+  questionsCache = { data: data ?? [], timestamp: now };
+  
+  return (data ?? []).find((q) => q.question_order === order) ?? null;
+}
 
 function normalizeAnswer(value: string): string {
   return value.trim().toLowerCase();
 }
 
 async function getTeamForUser(userId: string) {
-  const admin = await createAdminClient();
+  // Retry wrapper with error check inside
+  return withRetry(async () => {
+    const admin = await createAdminClient();
 
-  // Fast path for most users: leader_id match.
-  const leaderMatch = await admin
-    .from("teams")
-    .select("id, points")
-    .eq("leader_id", userId)
-    .maybeSingle();
-  if (leaderMatch.data) return leaderMatch.data;
+    // Fast path for most users: leader_id match.
+    const leaderMatch = await admin
+      .from("teams")
+      .select("id, points")
+      .eq("leader_id", userId)
+      .maybeSingle();
+    
+    // Check for network errors first
+    if (leaderMatch.error) {
+      const msg = leaderMatch.error.message.toLowerCase();
+      if (msg.includes("fetch") || msg.includes("network") || msg.includes("timeout")) {
+        throw new Error(leaderMatch.error.message);
+      }
+    }
+    
+    if (leaderMatch.data) return leaderMatch.data;
 
-  // Fallback for non-leader members.
-  const memberMatch = await admin
-    .from("teams")
-    .select("id, points")
-    .contains("team_members_ids", [userId])
-    .maybeSingle();
+    // Fallback for non-leader members.
+    const memberMatch = await admin
+      .from("teams")
+      .select("id, points")
+      .contains("team_members_ids", [userId])
+      .maybeSingle();
 
-  if (leaderMatch.error && !memberMatch.data) {
-    throw new Error(leaderMatch.error.message);
-  }
-  if (memberMatch.error && !memberMatch.data) {
-    throw new Error(memberMatch.error.message);
-  }
-  return memberMatch.data;
+    // Check for network errors
+    if (memberMatch.error) {
+      const msg = memberMatch.error.message.toLowerCase();
+      if (msg.includes("fetch") || msg.includes("network") || msg.includes("timeout")) {
+        throw new Error(memberMatch.error.message);
+      }
+    }
+
+    if (leaderMatch.error && !memberMatch.data) {
+      throw new Error(leaderMatch.error.message);
+    }
+    if (memberMatch.error && !memberMatch.data) {
+      throw new Error(memberMatch.error.message);
+    }
+    return memberMatch.data;
+  });
 }
 
 export async function POST(request: NextRequest) {

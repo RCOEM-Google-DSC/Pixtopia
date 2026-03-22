@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import VideoPlayer from "@/app/Components/Game/VideoPlayer";
 import MCQGrid from "@/app/Components/Game/MCQGrid";
+import { getRound4VideoUrl } from "@/lib/cloudinaryUrl";
 
 interface Question {
   order: number;
@@ -97,12 +98,19 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
     }
   }, [initialData, fetchState, initializeState]);
 
-  // Preload video links conceptually
+  // Generate Cloudinary video URLs for all Part B questions based on question order
   const allVideoUrls = useMemo(() => {
-    return questions.map(q => q.video_url).filter(Boolean);
+    return questions.map(q => getRound4VideoUrl(q.order));
   }, [questions]);
 
   const currentQuestion = questions[currentQIdx] ?? null;
+  
+  // Get Cloudinary video URL for current question
+  const currentVideoUrl = useMemo(() => {
+    if (!currentQuestion) return "";
+    return getRound4VideoUrl(currentQuestion.order);
+  }, [currentQuestion]);
+  
   const currentQCompleted = currentQuestion
     ? !!(roundState?.[`q${currentQuestion.order}_completed` as keyof RoundState])
     : false;
@@ -337,8 +345,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                   className="flex flex-col items-center gap-6 rounded-2xl bg-white/20 border-2 border-white/40 p-12 backdrop-blur-md shadow-2xl"
                 >
                   <div className="text-6xl">🎉</div>
-                  <div className="flex items-center gap-2 text-2xl font-black uppercase tracking-wider text-emerald-300">
-                    <div className="h-3 w-3 animate-pulse rounded-full bg-emerald-300" />
+                  <div className="flex items-center gap-2 text-2xl font-black uppercase tracking-wider">
                     Round 4 Complete!
                   </div>
                   <Button
@@ -392,7 +399,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                       ) : (
                         <div className="w-full flex justify-center">
                           <VideoPlayer 
-                            src={currentQuestion?.video_url || ""} 
+                            src={currentVideoUrl} 
                             className="w-full max-h-100 rounded-xl object-contain bg-black"
                           />
                         </div>

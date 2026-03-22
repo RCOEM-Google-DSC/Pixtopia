@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import SegmentedInput from "@/app/Components/Game/SegmentedInput";
 import { toast } from "sonner";
+import { getRound4ImageUrls } from "@/lib/cloudinaryUrl";
 
 // Local answers for instant hint generation (no API call needed)
 const ROUND4_ANSWERS: Record<number, string> = {
@@ -60,11 +61,14 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
   const [timeLeft, setTimeLeft] = useState(30);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
+  // Generate Cloudinary URLs for all Part A puzzles based on question order
   const allPartAImageUrls = useMemo(() => {
-    const urls = puzzles
-      .flatMap((p) => p.image_urls || [])
-      .filter((url): url is string => Boolean(url));
-    return Array.from(new Set(urls));
+    const urls: string[] = [];
+    puzzles.forEach((p) => {
+      const [img1, img2] = getRound4ImageUrls(p.order);
+      urls.push(img1, img2);
+    });
+    return urls;
   }, [puzzles]);
 
   const applyPuzzleState = useCallback((puz: Puzzle, rs: RoundState) => {
@@ -540,9 +544,9 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                       </Badge>
                       {loading ? (
                         <Skeleton className="h-full w-full" />
-                      ) : currentPuzzle?.image_urls?.[0] ? (
+                      ) : currentPuzzle ? (
                         <Image
-                          src={currentPuzzle.image_urls[0]}
+                          src={getRound4ImageUrls(currentPuzzle.order)[0]}
                           alt="Clue 1"
                           fill
                           sizes="(max-width: 768px) 100vw, 50vw"
@@ -571,9 +575,9 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                       </Badge>
                       {loading ? (
                         <Skeleton className="h-full w-full" />
-                      ) : currentPuzzle?.image_urls?.[1] ? (
+                      ) : currentPuzzle ? (
                         <Image
-                          src={currentPuzzle.image_urls[1]}
+                          src={getRound4ImageUrls(currentPuzzle.order)[1]}
                           alt="Clue 2"
                           fill
                           sizes="(max-width: 768px) 100vw, 50vw"

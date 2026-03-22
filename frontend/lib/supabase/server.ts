@@ -56,6 +56,7 @@ let _createClientFn: typeof import("@supabase/supabase-js")["createClient"] | nu
  * Server-side Supabase client with the service role key.
  * Bypasses RLS — use ONLY in trusted server contexts (API routes, seed scripts).
  * NEVER expose this on the client.
+ * Includes 8s timeout to prevent long hangs on network issues.
  */
 export async function createAdminClient() {
   if (!_createClientFn) {
@@ -67,6 +68,16 @@ export async function createAdminClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       auth: { autoRefreshToken: false, persistSession: false },
+      global: {
+        fetch: (url, options) => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          return fetch(url, { 
+            ...options, 
+            signal: controller.signal 
+          }).finally(() => clearTimeout(timeoutId));
+        }
+      }
     }
   );
 }

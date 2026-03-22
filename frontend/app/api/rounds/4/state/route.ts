@@ -1,11 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, createAdminClient } from "@/lib/supabase/server";
-import { unstable_cache } from "next/cache";
 
-const getRound4Questions = unstable_cache(
-  async () => {
+// Retry helper for transient network failures
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+  delayMs = 500
+): Promise<T> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+      const msg = err?.message?.toLowerCase() || "";
+      const isTransient =
+        msg.includes("fetch failed") ||
+        msg.includes("timeout") ||
+        msg.includes("network") ||
+        msg.includes("aborted") ||
+        msg.includes("econnrefused");
+      if (!isTransient || attempt === maxAttempts) {
+        throw err;
+      }
+      // Exponential backoff
+      await new Promise((r) => setTimeout(r, delayMs * Math.pow(2, attempt - 1)));
+    }
+  }
+  throw lastError;
+}
+
+// In-memory cache for questions (avoids caching failures)
+let questionsCache: { data: any[] | null; timestamp: number } = {
+  data: null,
+  timestamp: 0,
+};
+const CACHE_TTL = 300000; // 5 minutes
+
+async function getRound4Questions() {
+  const now = Date.now();
+  
+  // Use cache if valid
+  if (questionsCache.data && now - questionsCache.timestamp < CACHE_TTL) {
+    return questionsCache.data;
+  }
+
+  // Fetch with retry - error check INSIDE retry wrapper
+  const data = await withRetry(async () => {
     const admin = await createAdminClient();
-    const { data, error } = await admin
+    const result = await admin
       .from("questions")
       .select(
         "id, question_order, question, options, image_urls, video_url, answer, points",
@@ -13,26 +56,37 @@ const getRound4Questions = unstable_cache(
       .eq("round_id", "4")
       .order("question_order", { ascending: true })
       .order("id", { ascending: false });
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  },
-  ["round4-questions"],
-  { revalidate: 300 },
-);
+
+    // Throw inside retry so network errors get retried
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    return result.data;
+  });
+  
+  // Cache successful result
+  questionsCache = { data: data ?? [], timestamp: now };
+  
+  return data ?? [];
+}
 
 async function getTeamForUser(userId: string) {
-  const admin = await createAdminClient();
+  // Retry wrapper with error check inside
+  return withRetry(async () => {
+    const admin = await createAdminClient();
 
-  const { data, error } = await admin
-    .from("teams")
-    .select("id, points")
-    .or(`leader_id.eq.${userId},team_members_ids.cs.{"${userId}"}`)
-    .maybeSingle();
+    const result = await admin
+      .from("teams")
+      .select("id, points")
+      .or(`leader_id.eq.${userId},team_members_ids.cs.{"${userId}"}`)
+      .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
+    // Throw inside retry so network errors get retried
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    return result.data;
+  });
 }
 
 export async function GET(_request: NextRequest) {
