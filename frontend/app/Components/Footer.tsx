@@ -45,8 +45,21 @@ export default function Footer() {
           className="h-10 md:h-12 w-auto mb-10 object-contain"
         />
 
+        {/* Website Link */}
+        <p className="text-white font-['HvDTrial_Brandon_Grotesque:Medium',sans-serif] tracking-[1.7px] text-sm md:text-[17px] text-center uppercase mb-10">
+          Meet us on{" "}
+          <a
+            href="https://www.gdgrbu.tech"
+            className="hover:text-gray-300 transition-colors pointer-events-auto"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            www.gdgrbu.tech
+          </a>
+        </p>
+
         {/* Social Icons */}
-        <div className="flex items-center gap-8 mb-10">
+        <div className="flex items-center gap-8">
           <a
             href="https://www.instagram.com/gdg_rbu"
             target="_blank"
@@ -85,19 +98,6 @@ export default function Footer() {
             </svg>
           </a>
         </div>
-
-        {/* Website Link */}
-        <p className="text-white font-['HvDTrial_Brandon_Grotesque:Medium',sans-serif] tracking-[1.7px] text-sm md:text-[17px] text-center uppercase">
-          Meet us on{" "}
-          <a
-            href="https://www.gdgrbu.tech"
-            className="underline hover:text-gray-300 transition-colors pointer-events-auto"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            www.gdgrbu.tech
-          </a>
-        </p>
       </div>
     </footer>
   );
