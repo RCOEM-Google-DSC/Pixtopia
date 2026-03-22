@@ -8,7 +8,7 @@ import {
   subscribeToGameState, startRound, endRound,
   GameState, RoundStatus,
 } from "@/lib/database";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Loader2 } from "lucide-react";
 import svgPaths from "@/lib/cardSvgPaths";
 
 /* ─── card image paths (from card repo assets) ─── */
@@ -46,6 +46,10 @@ export default function DashboardPage() {
     summary?: { totalTeams: number; matchedTeams: number; unmatchedTeams: number; totalPointsAdded: number };
     error?: string;
   } | null>(null);
+  // Per-round loading states for buttons
+  const [startingRound, setStartingRound] = useState<Record<string, boolean>>({});
+  const [endingRound, setEndingRound] = useState<Record<string, boolean>>({});
+  const [navigating, setNavigating] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -98,7 +102,38 @@ export default function DashboardPage() {
   };
 
   const handleEnterRound = (id: string) => {
+    setNavigating((prev) => ({ ...prev, [id]: true }));
     router.push(`/dashboard/round/${id}`);
+  };
+
+  const handleStartRound = async (id: string) => {
+    if (startingRound[id]) return;
+    setStartingRound((prev) => ({ ...prev, [id]: true }));
+    try {
+      await startRound(id);
+    } finally {
+      setStartingRound((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleEndRound = async (id: string) => {
+    if (endingRound[id]) return;
+    setEndingRound((prev) => ({ ...prev, [id]: true }));
+    try {
+      await endRound(id);
+    } finally {
+      setEndingRound((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handlePreviewRound = (id: string) => {
+    if (navigating[id]) return;
+    setNavigating((prev) => ({ ...prev, [id]: true }));
+    if (id === "4") {
+      router.push(`/dashboard/round/4/part1`);
+    } else {
+      router.push(`/dashboard/round/${id}`);
+    }
   };
 
   const toggleRound = (roundNumber: number) => {
@@ -278,18 +313,22 @@ export default function DashboardPage() {
             {/* Normal user: only "Start Now" */}
             {!isAdmin && (
               <button
-                disabled={status !== "active" || hasSubmitted}
+                disabled={status !== "active" || hasSubmitted || !!navigating[round.id]}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (navigating[round.id]) return;
+                  setNavigating((prev) => ({ ...prev, [round.id]: true }));
                   if (round.id === "4") {
                     router.push(`/dashboard/round/4/part1`);
                   } else {
                     handleEnterRound(round.id);
                   }
                 }}
-                className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed whitespace-nowrap`}
+                className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 min-w-[140px]`}
               >
-                {hasSubmitted ? "DONE" : status === "active" ? "START" : status === "completed" ? "ENDED" : "LOCKED"}
+                {navigating[round.id] ? (
+                  <><Loader2 size={18} className="animate-spin" /> LOADING...</>
+                ) : hasSubmitted ? "DONE" : status === "active" ? "START" : status === "completed" ? "ENDED" : "LOCKED"}
               </button>
             )}
 
@@ -297,46 +336,41 @@ export default function DashboardPage() {
             {isAdmin && (
               <>
                 <button
-                  disabled={status === "active" || status === "completed"}
+                  disabled={status === "active" || status === "completed" || !!startingRound[round.id]}
                   onClick={(e) => {
                     e.stopPropagation();
-                    startRound(round.id);
+                    handleStartRound(round.id);
                   }}
-                  className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap min-w-[160px]`}
+                  className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap min-w-[160px] flex items-center justify-center gap-2`}
                 >
-                  START
+                  {startingRound[round.id] ? (
+                    <><Loader2 size={16} className="animate-spin" /> STARTING...</>
+                  ) : "START"}
                 </button>
                 <button
-                  disabled={status !== "active"}
+                  disabled={status !== "active" || !!endingRound[round.id]}
                   onClick={(e) => {
                     e.stopPropagation();
-                    endRound(round.id);
+                    handleEndRound(round.id);
                   }}
-                  className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap min-w-[160px]`}
+                  className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap min-w-[160px] flex items-center justify-center gap-2`}
                 >
-                  END ROUND
+                  {endingRound[round.id] ? (
+                    <><Loader2 size={16} className="animate-spin" /> ENDING...</>
+                  ) : "END ROUND"}
                 </button>
-                {round.id !== "4" ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEnterRound(round.id);
-                    }}
-                    className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 whitespace-nowrap min-w-[160px]`}
-                  >
-                    PREVIEW
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/round/4/part1`);
-                    }}
-                    className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 whitespace-nowrap min-w-[160px]`}
-                  >
-                    PREVIEW
-                  </button>
-                )}
+                <button
+                  disabled={!!navigating[round.id]}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePreviewRound(round.id);
+                  }}
+                  className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap min-w-[160px] flex items-center justify-center gap-2`}
+                >
+                  {navigating[round.id] ? (
+                    <><Loader2 size={16} className="animate-spin" /> LOADING...</>
+                  ) : "PREVIEW"}
+                </button>
                 {/* Scrape HackerRank for Round 2 */}
                 {round.id === "2" && (
                   <button
