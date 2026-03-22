@@ -89,7 +89,7 @@ async function fetchContestLeaderboard(
     for (const item of models) {
       data.push({
         name: (item.hacker as string).toLowerCase(),
-        score: item.score as number,
+        score: Math.round(Number(item.score || 0)),
       });
     }
 
@@ -255,10 +255,10 @@ export async function POST() {
 
     // Update team points only if there's a positive delta
     if (delta > 0) {
-      const { error: updateErr } = await admin
-        .from("teams")
-        .update({ points: team.points + delta })
-        .eq("id", team.id);
+      const { error: updateErr } = await admin.rpc("increment_team_points", {
+        team_id_input: team.id,
+        points_delta: delta,
+      });
 
       if (updateErr) {
         console.error(`Failed to update team ${team.team_name}:`, updateErr);
