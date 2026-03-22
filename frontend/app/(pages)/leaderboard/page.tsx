@@ -140,12 +140,14 @@ export default function LeaderboardPage() {
   const [data, setData] = useState<LBEntry[]>([]);
   const [search, setSearch] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Live Firestore subscription
+  // Live leaderboard: first `/api/teams` response ends loading
   useEffect(() => {
     const unsub = subscribeToLeaderboard((d) => {
       setData(d);
       setLastUpdated(new Date());
+      setIsLoading(false);
     });
     return () => unsub();
   }, []);
@@ -222,8 +224,14 @@ export default function LeaderboardPage() {
           <img src="/gdg.svg" alt="GDG" className="mb-2 h-14 w-auto" />
           <h1 className="text-4xl font-extrabold tracking-tight">Pixtopia Leaderboard</h1>
           <p className="text-zinc-400 text-sm">
-            Live · {data.length} teams competing
-            {lastUpdated && <> · Updated {lastUpdated.toLocaleTimeString()}</>}
+            {isLoading ? (
+              "Loading teams…"
+            ) : (
+              <>
+                Live · {data.length} teams competing
+                {lastUpdated && <> · Updated {lastUpdated.toLocaleTimeString()}</>}
+              </>
+            )}
           </p>
         </div>
 
@@ -234,11 +242,22 @@ export default function LeaderboardPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-12 w-full rounded-md border border-zinc-700 bg-zinc-900 px-4 text-lg text-white placeholder:text-zinc-500 shadow-lg outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              disabled={isLoading}
+              className="h-12 w-full rounded-md border border-zinc-700 bg-zinc-900 px-4 text-lg text-white placeholder:text-zinc-500 shadow-lg outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               type="text"
               placeholder="Search team…"
             />
-            <LBTable data={rows} />
+            {isLoading ? (
+              <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-md border border-zinc-700 bg-zinc-900/50 py-16 text-zinc-400">
+                <div
+                  className="h-10 w-10 animate-spin rounded-full border-2 border-zinc-600 border-t-indigo-500"
+                  aria-hidden
+                />
+                <p className="text-sm">Fetching leaderboard…</p>
+              </div>
+            ) : (
+              <LBTable data={rows} />
+            )}
           </div>
         </main>
 

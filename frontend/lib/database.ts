@@ -307,10 +307,17 @@ export function subscribeToLeaderboard(
   const supabase = getClient();
 
   const fetchAndEmit = async () => {
-    const res = await fetch("/api/teams");
-    if (!res.ok) return;
-    const teams: TeamData[] = await res.json();
-    callback(teams.map((t) => ({ name: t.team_name, points: t.points })));
+    try {
+      const res = await fetch("/api/teams");
+      if (!res.ok) {
+        callback([]);
+        return;
+      }
+      const teams: TeamData[] = await res.json();
+      callback(teams.map((t) => ({ name: t.team_name, points: t.points })));
+    } catch {
+      callback([]);
+    }
   };
 
   // Fetch initial data immediately

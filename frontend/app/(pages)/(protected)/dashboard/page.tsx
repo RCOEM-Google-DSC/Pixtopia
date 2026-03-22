@@ -34,8 +34,8 @@ function getRoundScore(submission: Record<string, unknown> | null, roundId: stri
 }
 
 export default function DashboardPage() {
-  const { user, isAdmin } = useAuth();
-  const { team, submission } = useTeam();
+  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { team, submission, loading: teamLoading } = useTeam();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [expandedRound, setExpandedRound] = useState<number | null>(null);
   const [scraping, setScraping] = useState(false);
@@ -466,7 +466,17 @@ export default function DashboardPage() {
           </div>
           <div className="text-right">
             <span className="text-[25px] uppercase  text-zinc-400 block">Score</span>
-            <span className="text-2xl font-bold text-white tabular-nums">{team?.points ?? 0}</span>
+            {authLoading || teamLoading ? (
+              <div className="flex items-center justify-end gap-2 min-h-[2rem]">
+                <span
+                  className="h-6 w-6 shrink-0 animate-spin rounded-full border-2 border-zinc-600 border-t-white"
+                  aria-hidden
+                />
+                <span className="text-lg font-medium text-zinc-500 tabular-nums">…</span>
+              </div>
+            ) : (
+              <span className="text-2xl font-bold text-white tabular-nums">{team?.points ?? 0}</span>
+            )}
           </div>
         </div>
 
