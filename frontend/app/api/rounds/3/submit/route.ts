@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
 
   let isCorrect = question.correct_index === selectedIndex;
 
-  if (timeElapsed > 120 || selectedIndex === null) {
-      console.log(`[R3 DEBUG] Q${questionOrder}: Forcing incorrect — timeout or null selection`);
+  if (selectedIndex === null || selectedIndex === -1) {
+      console.log(`[R3 DEBUG] Q${questionOrder}: Forcing incorrect — null or -1 selection`);
       isCorrect = false;
   }
 
