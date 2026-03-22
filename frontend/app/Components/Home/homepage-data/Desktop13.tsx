@@ -922,7 +922,7 @@ export default function Desktop() {
         </div>
       </div>
       <Desktop13Helper additionalClassNames="left-[85px] top-[266.36px]" />
-      <p className="absolute font-['HvDTrial_Brandon_Grotesque:Light',sans-serif] h-[27px] leading-[normal] left-[94px] not-italic text-[19px] text-black top-[1125px] tracking-[1.9px] w-[255px]">
+      <p className="absolute mt-2 font-['HvDTrial_Brandon_Grotesque:Light',sans-serif] h-[27px] leading-[normal] left-[94px] not-italic text-[19px] text-black top-[1125px] tracking-[1.9px] w-[255px]">
         THE INCREDIBLES
       </p>
       <p className="-translate-x-full absolute font-['HvDTrial_Brandon_Grotesque:Medium',sans-serif] h-[39.542px] leading-[normal] left-[1329.07px] not-italic text-[34px] text-black text-right top-[684px] tracking-[3.4px] w-[242.072px]">
@@ -1559,7 +1559,10 @@ export default function Desktop() {
       <p className="-translate-x-1/2 absolute font-['Inter:Light',sans-serif] font-light h-[22px] leading-[normal] left-[345px] not-italic text-[18px] text-center text-white top-[5119px] tracking-[8.28px] w-[232px] pointer-events-none z-30">
         LEADERBOARD
       </p>
-      <Link href="/leaderboard" className="absolute flex items-center justify-center border border-solid border-white h-[62px] left-[205px] rounded-[31px] top-[5099px] w-[280px] z-20 cursor-pointer hover:bg-white/10 transition-colors" />
+      <Link
+        href="/leaderboard"
+        className="absolute flex items-center justify-center border border-solid border-white h-[62px] left-[205px] rounded-[31px] top-[5099px] w-[280px] z-20 cursor-pointer hover:bg-white/10 transition-colors"
+      />
       <p className="-translate-x-1/2 absolute font-['Inter:Light',sans-serif] font-light leading-[normal] left-[292.5px] not-italic text-[18px] text-center text-white top-[5043px] tracking-[8.28px] whitespace-nowrap">
         live now
       </p>

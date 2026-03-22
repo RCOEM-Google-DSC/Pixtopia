@@ -287,7 +287,7 @@ export default function DashboardPage() {
                     handleEnterRound(round.id);
                   }
                 }}
-                className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap`}
+                className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed whitespace-nowrap`}
               >
                 {hasSubmitted ? "DONE" : status === "active" ? "START" : status === "completed" ? "ENDED" : "LOCKED"}
               </button>
@@ -431,7 +431,7 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="text-right">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 block">Score</span>
+            <span className="text-[25px] uppercase  text-zinc-400 block">Score</span>
             <span className="text-2xl font-bold text-white tabular-nums">{team?.points ?? 0}</span>
           </div>
         </div>
