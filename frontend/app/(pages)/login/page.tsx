@@ -307,23 +307,31 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const supabase = createClient();
+
+      // For admin: call the API to bootstrap the account if it doesn't exist yet
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      if (adminEmail && email === adminEmail) {
+        await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        // Ignore result — we'll auth via client below anyway
+      }
+
+      // Direct client-side sign-in — skips the Docker server round-trip
+      // @supabase/ssr browser client handles cookies automatically
+      const { error: authErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Invalid login credentials");
+
+      if (authErr) {
+        setError(authErr.message);
         setLoading(false);
         return;
       }
-
-      // The server route already set session cookies via @supabase/ssr.
-      // Just refresh the client auth state from the cookie — no need for
-      // a second signInWithPassword() round-trip to Supabase.
-      const supabase = createClient();
-      await supabase.auth.getUser();
 
       router.replace("/dashboard");
       // Intentionally not setting loading to false so the UI stays in loading state during transition
