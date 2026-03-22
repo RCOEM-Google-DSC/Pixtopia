@@ -10,7 +10,6 @@ import {
 } from "@/lib/database";
 import { RefreshCw } from "lucide-react";
 import svgPaths from "@/lib/cardSvgPaths";
-import SiteNavbar from "@/app/Components/Navigation/DashboardNavbar";
 
 /* ─── card image paths (from card repo assets) ─── */
 const imgPngwingCom4 = "/cards/card-1.png";
@@ -282,7 +281,11 @@ export default function DashboardPage() {
                 disabled={status !== "active" || hasSubmitted}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleEnterRound(round.id);
+                  if (round.id === "4") {
+                    router.push(`/dashboard/round/4/part1`);
+                  } else {
+                    handleEnterRound(round.id);
+                  }
                 }}
                 className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap`}
               >
@@ -313,15 +316,27 @@ export default function DashboardPage() {
                 >
                   END ROUND
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEnterRound(round.id);
-                  }}
-                  className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 whitespace-nowrap min-w-[160px]`}
-                >
-                  PREVIEW
-                </button>
+                {round.id !== "4" ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEnterRound(round.id);
+                    }}
+                    className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 whitespace-nowrap min-w-[160px]`}
+                  >
+                    PREVIEW
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/round/4/part1`);
+                    }}
+                    className={`${round.btnBg} ${round.btnText} px-8 py-3 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all duration-300 whitespace-nowrap min-w-[160px]`}
+                  >
+                    PREVIEW
+                  </button>
+                )}
                 {/* Scrape HackerRank for Round 2 */}
                 {round.id === "2" && (
                   <button
@@ -396,13 +411,13 @@ export default function DashboardPage() {
             className="absolute bottom-4 right-4 z-20 pointer-events-none"
             style={{ opacity: isExpanded ? 1 : 0.8, transition: 'opacity 0.3s' }}
           >
-            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold backdrop-blur-sm
-              ${status === "active" ? "bg-green-500/30 text-green-200 border border-green-400/40" : ""}
+            {/* <span className={`text-xs px-2.5 py-1 rounded-full font-semibold backdrop-blur-sm
+              ${status === "active" ? "bg-green-600 text-white border border-green-400/40" : ""}
               ${status === "completed" ? "bg-white/20 text-white/70 border border-white/30" : ""}
             `}>
               {status === "active" && "LIVE"}
               {status === "completed" && "ENDED"}
-            </span>
+            </span> */}
           </div>
         )}
 
@@ -420,8 +435,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen relative text-white overflow-hidden bg-black" style={{ fontFamily: "'Brandon Grotesque', sans-serif" }}>
-      <SiteNavbar />
-
       {/* ─── Content ─── */}
       <div className="relative z-10">
         {/* Team Name */}

@@ -4,6 +4,19 @@ import { unstable_cache } from "next/cache";
 
 const MAX_PART_A_HINTS = 3;
 
+function isTransientAuthFailure(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const maybeMessage = (error as { message?: unknown }).message;
+  if (typeof maybeMessage !== "string") return false;
+  const msg = maybeMessage.toLowerCase();
+  return (
+    msg.includes("fetch failed") ||
+    msg.includes("timeout") ||
+    msg.includes("connect") ||
+    msg.includes("network")
+  );
+}
+
 const getRound4QuestionByOrder = unstable_cache(
   async (order: number) => {
     const admin = await createAdminClient();
@@ -63,7 +76,16 @@ export async function POST(request: NextRequest) {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (authError) {
+      if (isTransientAuthFailure(authError)) {
+        return NextResponse.json(
+          { error: "Authentication service temporarily unavailable" },
+          { status: 503 },
+        );
+      }
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +32,7 @@ const MAX_HINTS_PER_QUESTION = 3;
 
 export default function Round4Part1Client({ initialData }: { initialData?: any }) {
   const router = useRouter();
+  const autoSkipTriggeredRef = useRef(false);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [puzzles, setPuzzles] = useState<Puzzle[]>(initialData?.puzzles ? initialData.puzzles.filter((p: any) => p.order <= 3) : []);
@@ -54,6 +55,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
   }, [puzzles]);
 
   const applyPuzzleState = useCallback((puz: Puzzle, rs: RoundState) => {
+    autoSkipTriggeredRef.current = false;
     const hints: number[] =
       (rs[`q${puz.order}_hints_revealed` as keyof RoundState] as number[]) ||
       [];
@@ -98,6 +100,11 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
         (p: Puzzle) => !!data.roundState[`q${p.order}_completed`],
       );
     setAllDone(partADone);
+    
+    if (partADone) {
+      router.push("/dashboard/round/4/part2");
+      return;
+    }
 
     // Start at the first uncompleted puzzle
     const startIdx = partAPuzzles.findIndex(
@@ -117,6 +124,16 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
     }
   }, [initialData, fetchState, initializeState]);
 
+  // Auto-redirect to part2 when all questions in part1 are answered and allDone is set.
+  useEffect(() => {
+    if (allDone) {
+      const timer = setTimeout(() => {
+        router.push("/dashboard/round/4/part2");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [allDone, router]);
+
   // Eagerly warm image cache for all Part A clues to avoid delays between questions.
   useEffect(() => {
     if (allPartAImageUrls.length === 0) return;
@@ -133,33 +150,12 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
     };
   }, [allPartAImageUrls]);
 
-  // Timer logic
-  useEffect(() => {
-    if (allDone || loading || submitting) return;
-    if (timeLeft <= 0) return;
-
+  const handleSkip = useCallback(async () => {
     const currentPuzzle = puzzles[currentQIdx];
-    if (!currentPuzzle) return;
+    if (!currentPuzzle || submitting) return;
     const isCompleted = !!roundState?.[`q${currentPuzzle.order}_completed` as keyof RoundState];
     if (isCompleted) return;
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSkip();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [currentQIdx, allDone, loading, submitting, puzzles, roundState]);
-
-  const handleSkip = async () => {
-    const currentPuzzle = puzzles[currentQIdx];
-    if (!currentPuzzle) return;
     setSubmitting(true);
     setSubmitFeedback(null);
     try {
@@ -191,6 +187,8 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
               setCurrentQIdx(nextIdx);
               applyPuzzleState(puzzles[nextIdx], updatedRS);
               setSubmitFeedback(null);
+            } else {
+              setAllDone(true);
             }
           }, 1400);
         }
@@ -202,7 +200,31 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [applyPuzzleState, currentQIdx, puzzles, roundState, submitting]);
+
+  // Timer logic: tick down with a single timeout and auto-skip exactly once at expiry.
+  useEffect(() => {
+    if (allDone || loading || submitting) return;
+
+    const currentPuzzle = puzzles[currentQIdx];
+    if (!currentPuzzle) return;
+    const isCompleted = !!roundState?.[`q${currentPuzzle.order}_completed` as keyof RoundState];
+    if (isCompleted) return;
+
+    if (timeLeft <= 0) {
+      if (!autoSkipTriggeredRef.current) {
+        autoSkipTriggeredRef.current = true;
+        void handleSkip();
+      }
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [allDone, currentQIdx, handleSkip, loading, puzzles, roundState, submitting, timeLeft]);
 
   const currentPuzzle = puzzles[currentQIdx] ?? null;
   const currentQCompleted = currentPuzzle
@@ -253,6 +275,8 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
               setCurrentQIdx(nextIdx);
               applyPuzzleState(puzzles[nextIdx], updatedRS);
               setSubmitFeedback(null);
+            } else {
+              setAllDone(true);
             }
           }, 1400);
         }
@@ -441,8 +465,11 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                         <Image
                           src={currentPuzzle.image_urls[0]}
                           alt="Clue 1"
-                          fill                          sizes="(max-width: 768px) 100vw, 50vw"
-                          priority                          className="object-cover"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          priority
+                          unoptimized
+                          className="object-cover"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-white/50">
@@ -469,8 +496,11 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                         <Image
                           src={currentPuzzle.image_urls[1]}
                           alt="Clue 2"
-                          fill                          sizes="(max-width: 768px) 100vw, 50vw"
-                          priority                          className="object-cover"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          priority
+                          unoptimized
+                          className="object-cover"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-white/50">

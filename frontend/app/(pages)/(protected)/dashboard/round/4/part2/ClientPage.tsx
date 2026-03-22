@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +31,7 @@ interface RoundState {
 
 export default function Round4Part2Client({ initialData }: { initialData?: any }) {
   const router = useRouter();
+  const autoSkipTriggeredRef = useRef(false);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>(initialData?.puzzles?.filter((p: any) => p.order >= 4) || []);
@@ -79,6 +80,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
     const idx = startIdx === -1 ? partB.length - 1 : startIdx;
     setCurrentQIdx(idx);
     
+    autoSkipTriggeredRef.current = false;
     setHintText(null);
     setSelectedIndex(undefined);
     setTimeLeft(30); // reset timer
@@ -107,90 +109,14 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
     ? !!(roundState?.[`q${currentQuestion.order}_hints_revealed` as keyof RoundState])
     : false;
 
-  // Timer logic — auto-submit selected option on expiry, otherwise skip
-  const handleTimerExpiry = useCallback(() => {
-    if (selectedIndex !== undefined && currentQuestion && !submitting && !currentQCompleted) {
-      // Auto-submit the selected answer
-      (async () => {
-        setSubmitting(true);
-
-        const { round4PartBQuestions } = await import("@/lib/round4PartB");
-        const qData = round4PartBQuestions.find((q) => q.order === currentQuestion.order);
-        if (!qData) {
-          setSubmitting(false);
-          return;
-        }
-
-        const isCorrect = Number(selectedIndex) === qData.correct_index;
-
-        if (isCorrect) {
-          toast.success("Correct!");
-          const isAllDone = currentQIdx + 1 === questions.length;
-          
-          setRoundState(prev => prev ? { 
-            ...prev, 
-            [`q${currentQuestion.order}_completed`]: true,
-            is_completed: isAllDone 
-          } : null);
-
-          if (isAllDone) {
-            setTimeout(() => setAllDone(true), 1200);
-          } else {
-            setTimeout(() => {
-              const nextIdx = currentQIdx + 1;
-              if (nextIdx < questions.length) {
-                setCurrentQIdx(nextIdx);
-                setSelectedIndex(undefined);
-                setHintText(null);
-                setTimeLeft(30);
-              }
-            }, 1400);
-          }
-
-          fetch("/api/rounds/4/submit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ answerIndex: selectedIndex, questionOrder: currentQuestion.order }),
-          }).catch(console.error);
-
-        } else {
-          toast.error("Wrong answer");
-        }
-        
-        setSubmitting(false);
-      })();
-    } else {
-      handleSkip();
-    }
-  }, [selectedIndex, currentQuestion, submitting, currentQCompleted, currentQIdx, questions]);
-
-  useEffect(() => {
-    if (allDone || loading || submitting) return;
-    if (timeLeft <= 0) return;
-
+  const handleSkip = useCallback(async () => {
     const cq = questions[currentQIdx];
-    if (!cq) return;
+    if (!cq || submitting) return;
     const isCompleted = !!roundState?.[`q${cq.order}_completed` as keyof RoundState];
     if (isCompleted) return;
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleTimerExpiry();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [currentQIdx, allDone, loading, submitting, questions, roundState, handleTimerExpiry]);
-
-  const handleSkip = async () => {
-    const cq = questions[currentQIdx];
-    if (!cq) return;
     setSubmitting(true);
+    setSubmitFeedback("skipped");
 
     const isAllDone = currentQIdx + 1 === questions.length;
     const updatedRS = {
@@ -209,21 +135,50 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
         setSelectedIndex(undefined);
         setHintText(null);
         setTimeLeft(30);
+        autoSkipTriggeredRef.current = false;
       }
     }
 
-    fetch("/api/rounds/4/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        answerIndex: -1, 
-        questionOrder: cq.order,
-        skipped: true 
-      }),
-    }).catch(console.error);
+    try {
+      await fetch("/api/rounds/4/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answerIndex: -1,
+          questionOrder: cq.order,
+          skipped: true,
+        }),
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+      setTimeout(() => setSubmitFeedback(null), 1200);
+    }
+  }, [currentQIdx, questions, roundState, submitting]);
 
-    setSubmitting(false);
-  };
+  useEffect(() => {
+    if (allDone || loading || submitting) return;
+
+    const cq = questions[currentQIdx];
+    if (!cq) return;
+    const isCompleted = !!roundState?.[`q${cq.order}_completed` as keyof RoundState];
+    if (isCompleted) return;
+
+    if (timeLeft <= 0) {
+      if (!autoSkipTriggeredRef.current) {
+        autoSkipTriggeredRef.current = true;
+        void handleSkip();
+      }
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [allDone, currentQIdx, handleSkip, loading, questions, roundState, submitting, timeLeft]);
   const optionsDisabled = submitting || loading || currentQCompleted;
 
   const getNextHintCost = useCallback(() => {
@@ -429,14 +384,14 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                         </div>
                       </div>
                     )}
-                    <Card className="relative overflow-hidden border-4 border-white/40 bg-black/50 p-2 backdrop-blur-sm shadow-2xl rounded-2xl flex items-center justify-center min-h-[300px]">
+                    <Card className="relative overflow-hidden border-4 border-white/40 bg-black/50 p-2 backdrop-blur-sm shadow-2xl rounded-2xl flex items-center justify-center min-h-75">
                       {loading ? (
                         <Skeleton className="h-full w-full absolute inset-0" />
                       ) : (
                         <div className="w-full flex justify-center">
                           <VideoPlayer 
                             src={currentQuestion?.video_url || ""} 
-                            className="w-full max-h-[400px] rounded-xl object-contain bg-black"
+                            className="w-full max-h-100 rounded-xl object-contain bg-black"
                           />
                         </div>
                       )}
