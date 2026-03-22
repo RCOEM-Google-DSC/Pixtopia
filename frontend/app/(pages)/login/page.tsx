@@ -355,7 +355,10 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace("/dashboard");
+      // Full page navigation (not client-side) so the request goes through
+      // proxy.ts → updateSession() → cookies are properly synced to the server.
+      // router.replace() is client-side only and skips the proxy entirely.
+      window.location.href = "/dashboard";
       // Intentionally not setting loading to false so the UI stays in loading state during transition
     } catch {
       setError("Failed to connect. Please try again.");
