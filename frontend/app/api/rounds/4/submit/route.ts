@@ -7,12 +7,12 @@ const getRound4QuestionByOrder = unstable_cache(
     const admin = await createAdminClient();
     const { data, error } = await admin
       .from("questions")
-      .select("id, order, answer, correct_index, points")
+      .select("id, question_order, answer, correct_index, points")
       .eq("round_id", "4")
       .order("id", { ascending: false })
       .limit(24);
     if (error) throw new Error(error.message);
-    return (data ?? []).find((q) => q.order === order) ?? null;
+    return (data ?? []).find((q) => q.question_order === order) ?? null;
   },
   ["round4-submit-question-by-order"],
   { revalidate: 300 },

@@ -46,10 +46,10 @@ async function getInitialState() {
       admin
         .from("questions")
         .select(
-          "id, order, question, options, image_urls, video_url, answer, points, hint_cost",
+          "id, question_order, question, options, image_urls, video_url, answer, points, hint_cost",
         )
         .eq("round_id", "4")
-        .order("order", { ascending: true })
+        .order("question_order", { ascending: true })
         .order("id", { ascending: false }),
       admin
         .from("submissions")
@@ -64,17 +64,17 @@ async function getInitialState() {
 
   const seen = new Map<number, any>();
   for (const q of questions ?? []) {
-    if (!seen.has(q.order)) seen.set(q.order, q);
+    if (!seen.has(q.question_order)) seen.set(q.question_order, q);
   }
   const uniqueQuestions = Array.from(seen.values())
-    .sort((a, b) => a.order - b.order)
+    .sort((a, b) => a.question_order - b.question_order)
     .slice(0, 10);
 
   const r4 = submission?.round4 || {};
   const puzzles = uniqueQuestions.map((q: any) => {
-    if (q.order >= 8) {
+    if (q.question_order >= 8) {
       return {
-        order: q.order,
+        order: q.question_order,
         question: q.question || "",
         video_url: q.video_url || "",
         options: q.options || [],
@@ -84,14 +84,14 @@ async function getInitialState() {
       };
     }
 
-    const hintsData = r4[`q${q.order}_hints_revealed`];
+    const hintsData = r4[`q${q.question_order}_hints_revealed`];
     const hints: number[] = Array.isArray(hintsData) ? hintsData : [];
     const revealedLetters = hints.map((idx: number) => ({
       index: idx,
       char: q.answer ? q.answer[idx] : "",
     }));
     return {
-      order: q.order,
+      order: q.question_order,
       image_urls: q.image_urls || [],
       answer_length: q.answer ? q.answer.length : 0,
       revealed_letters: revealedLetters,

@@ -8,10 +8,10 @@ const getRound4Questions = unstable_cache(
     const { data, error } = await admin
       .from("questions")
       .select(
-        "id, order, question, options, image_urls, video_url, answer, points",
+        "id, question_order, question, options, image_urls, video_url, answer, points",
       )
       .eq("round_id", "4")
-      .order("order", { ascending: true })
+      .order("question_order", { ascending: true })
       .order("id", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -54,10 +54,10 @@ export async function GET(_request: NextRequest) {
     // Deduplicate in JS (one row per order)
     const seen = new Map<number, any>();
     for (const q of questions) {
-      if (!seen.has(q.order)) seen.set(q.order, q);
+      if (!seen.has(q.question_order)) seen.set(q.question_order, q);
     }
     const uniqueQuestions = Array.from(seen.values())
-      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => a.question_order - b.question_order)
       .slice(0, 6);
 
     const admin = await createAdminClient();
@@ -72,10 +72,10 @@ export async function GET(_request: NextRequest) {
     // Build puzzle payload per question, exposing only revealed characters for Part A
     // and video/options for Part B.
     const puzzles = uniqueQuestions.map((q: any) => {
-      if (q.order >= 4) {
+      if (q.question_order >= 4) {
         // Part B: Video MCQ
         return {
-          order: q.order,
+          order: q.question_order,
           question: q.question || "",
           video_url: q.video_url || "",
           options: q.options || [],
@@ -85,13 +85,13 @@ export async function GET(_request: NextRequest) {
       }
 
       // Part A: Visual Puzzle
-      const hints: number[] = r4[`q${q.order}_hints_revealed`] || [];
+      const hints: number[] = r4[`q${q.question_order}_hints_revealed`] || [];
       const revealedLetters = hints.map((idx: number) => ({
         index: idx,
         char: q.answer ? q.answer[idx] : "",
       }));
       return {
-        order: q.order,
+        order: q.question_order,
         image_urls: q.image_urls || [],
         answer_length: q.answer ? q.answer.length : 0,
         revealed_letters: revealedLetters,

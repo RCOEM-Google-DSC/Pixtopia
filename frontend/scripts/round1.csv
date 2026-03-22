@@ -1,0 +1,36 @@
+id,round_id,order,question,options,correct_index,image_urls,letters,answer,points,video_url,hint,hint_cost
+7e2b73c0-ff78-4cc0-9108-ec2f2802b6f0,1,1,"Dory starts from the initial position (0, 0), facing North. She swims 6 km, turns right and swims 8 km, then turns left and swims 4 km. Finally, she turns right again and swims 2 km. All turns are 90°. What is the difference between the total distance she travelled and the shortest straight-line distance from her final position back to her starting point?","[""(20 - 10√2)km"",""10√2 km"",""(20 + 10√2) km"",""(14 - 10√2) km""]",0,null,null,null,100,null,null,10
+cf74a003-4944-491e-9fac-824207b4f2ea,1,2,"Woody is standing in front of Andy’s house when 10 enemies approach him. Woody already has a loaded gun. Each time Woody fires a bullet, the targeted enemy dies instantly, after which Woody’s gun takes 1 second to reload before he can fire again. The enemies also carry guns, but before shooting they must first take out their guns then spend an additional 2 seconds loading then 1 second to fire. Once any enemy fires a bullet, Woody dies immediately. If Woody dies, any bullet fired by Woody at the same moment has no effect on an enemy. Woody’s initial KD ratio is 0, where KD is defined as the number of enemies killed divided by the number of times Woody is killed. What is the final KD ratio of Woody?","[""2 : 0"",""4 : 1"",""3:1"",""10:0""]",2,null,null,null,100,null,null,10
+125559f2-eb13-4f16-a809-18314485ac3e,1,3,"Carl and Russell are two friends. Initially, the ratio of Carl’s age to Russell’s age is 5 : 4. After 4 years, the ratio of their ages becomes 7 : 6. The difference between their present ages remains constant over time. What will be the ratio after 7 years?","[""10 : 9"",""15 : 17"",""17 : 15"",""9 : 10""]",2,null,null,null,100,null,null,10
+4c5b700d-bd97-4bb0-8c21-74d51b742953,1,4,"During the final lap of the Piston Cup, Lightning McQueen is racing toward the finish line at 180 km/h. Chick Hicks is chasing him at 252 km/h, starting 300 m behind. Both cars move in a straight line toward the finish line. If Chick catches McQueen before the finish line, he wins; if McQueen reaches the finish line first, he wins. Find the distance of the finish line from McQueen’s current position such that both reach the finish line at the same time.","[""600 m"",""750 m"",""700 m"",""1050 m""]",1,null,null,null,100,null,null,10
+497e08b7-b9f1-43a3-b930-9027fb9b9a72,1,5,"Woody buys a toy box at ₹800. He marks it 25% above cost price. During a sale, he offers 10% discount on the marked price. What is his profit or loss percentage?","[""10% profit"",""12.5% profit"",""8% profit"",""5% loss""]",1,null,null,null,100,null,null,10
+9de4a2ea-b88d-4736-a35b-127deeb66a74,1,6,"Dash finds two security blind spots:
+• 9:00 PM to 2:00 AM
+• 3:00 AM to 5:00 AM
+Each time he uses a blind spot, he needs 15 minutes to prepare and 20 minutes to exit safely. During effective time, he collects $1000 per minute. How much money does he collect?","[""480000$"",""445000$"",""350000$"",""320000$""]",2,null,null,null,100,null,null,10
+f630902a-1eb5-4af6-a278-528113396476,1,7,A train is 150 m long and entering a tunnel 350 m long. Lightning starts from the rear and must reach the engine at the front. Find the total distance he must travel.,"[""350 m"",""400 m"",""500 m"",""450 m""]",2,null,null,null,100,null,null,10
+c6a80520-d8c2-4de6-8297-08c9798cf3bd,1,8,"Mike has 13 friends — 5 close friends and 8 classmates. He must exclude exactly two, and at least one excluded must be a classmate. How many ways can he choose the two to exclude?","[""78"",""68"",""28"",""55""]",1,null,null,null,100,null,null,10
+100961c0-46b6-4717-9ffe-57d1fecebaa9,1,9,Five heroes have an average age of 32 years. One leaves and is replaced by someone 8 years older than the average of the remaining four. The group’s average increases by 2 years. Find the age of the person who left.,"[""24 years"",""28 years"",""30 years"",""32 years""]",1,null,null,null,100,null,null,10
+e483311d-952e-4592-b73b-3a2d0c1a94a0,1,10,"450 like Finding Nemo
+300 like Toy Story
+600 like Cars
+200 like Nemo & Cars
+180 like Toy Story & Cars
+100 like all three
+Total surveyed: 1000
+How many like both Toy Story and Finding Nemo?","[""50"",""60"",""70"",""80""]",2,null,null,null,100,null,null,10
+56f488a4-15bb-49f4-9a73-f19bb0123239,1,11,3 friendly fish and 3 sharks must cross using a small boat that carries at most 2. Sharks cannot outnumber fish unless no fish are present. Minimum one-way trips required?,"[""9"",""11"",""13"",""15""]",1,null,null,null,100,null,null,10
+92e8dee1-39c6-448b-94b4-16a1076ccc75,1,12,"In Up, Carl must transport four items — Golden Idol (G), Fuel Canister (F), Hunting Dog (D), and Remote Control (R) — from his floating house to Paradise Falls using a lift that carries only one item at a time and must return after each drop. Rules: G and F cannot be left together without R. D cannot be left alone with R. Is it possible to transport all items safely?","[""Yes, in 5 trips"",""Yes, in 7 trips"",""Yes, in 9 trips"",""Impossible""]",1,null,null,null,100,null,null,10
+04455cd7-6a77-49ca-b7d8-98d804d92f97,1,13,"In Cars, four racers — Lightning McQueen, Jackson Storm, Cruz Ramirez, and Chick Hicks — finish in four distinct positions from 1st to 4th. Conditions: Lightning finishes ahead of Jackson. Cruz does not finish 1st or 4th. Chick finishes immediately after Jackson. Jackson does not finish 2nd. Who finishes 2nd?","[""Lightning"",""Jackson"",""Cruz"",""Chick""]",2,null,null,null,100,null,null,10
+22ca6139-e9a3-4582-8db0-ab2e8a5691e7,1,14,"In The Incredibles, Mr. Incredible, Elastigirl, and Frozone are drilling into a vault. Alone work times:
+Mr. Incredible → 12 hours
+Elastigirl → 18 hours
+Frozone → 24 hours
+Conditions: All three start together. After 3 hours, Frozone leaves. After 2 more hours, Mr. Incredible works at 50% efficiency. Elastigirl continues at normal speed. Find the total time required (from start) to complete the drilling.","[""6 hours"",""6 3/4 hours"",""6 6/7 hours"",""7 hours""]",2,null,null,null,100,null,null,10
+44212da7-4c0f-44b4-872d-328970498a2e,1,15,"Five businesses — Animation, Merchandise, Racing, Theme Parks, Streaming — are controlled by Woody, Buzz, Lightning, Remy, and Mr. Incredible. Conditions:
+Woody does not control Racing or Streaming.
+Buzz controls either Merchandise or Theme Parks.
+Lightning controls Racing.
+Remy does not control Theme Parks.
+Mr. Incredible does not control Merchandise or Racing.
+Who controls Streaming? (Hint: Think according to options)","[""Woody"",""Buzz"",""Lightning"",""Remy""]",3,null,null,null,100,null,null,10

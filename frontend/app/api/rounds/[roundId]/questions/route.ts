@@ -24,7 +24,7 @@ export async function GET(
     .from("questions")
     .select("*")
     .eq("round_id", roundId)
-    .order("order", { ascending: true });
+    .order("question_order", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

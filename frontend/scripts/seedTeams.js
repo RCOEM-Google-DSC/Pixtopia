@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
-require("dotenv").config({ path: "../.env" });
+require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("fs");
 const path = require("path");

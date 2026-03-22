@@ -10,7 +10,7 @@ CREATE TABLE public.game_state (
 CREATE TABLE public.questions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   round_id text NOT NULL,
-  order integer NOT NULL,
+  question_order integer NOT NULL,
   question text,
   options ARRAY,
   correct_index integer NOT NULL DEFAULT 0,

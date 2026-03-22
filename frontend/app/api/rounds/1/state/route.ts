@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest) {
       .from("questions")
       .select("*")
       .eq("round_id", "1")
-      .order("order", { ascending: true });
+      .order("question_order", { ascending: true });
 
     if (questionsError) {
       return NextResponse.json(
