@@ -17,6 +17,12 @@ export function useTeam() {
       return;
     }
 
+    // Auth often resolves after first paint (user was null → defined). Without
+    // setting loading here, dashboard score shows 0 until getTeamByLeader returns.
+    setLoading(true);
+    setTeam(null);
+    setSubmission(null);
+
     let unsubscribe: (() => void) | null = null;
 
     (async () => {
