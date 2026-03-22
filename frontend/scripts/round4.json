@@ -1,0 +1,48 @@
+{
+    "1":"Up",
+    "2":"Ratatouille",
+    "3":"Coco",
+    "4":"Finding Nemo",
+    "5":"Cars",
+    "6":"Elemental",
+    "7":"Toy Story",
+    "8":{
+        "Options": [
+            "A. Mama Coco starts singing along and remembers her father",
+            "B. The family stops Miguel from singing",
+            "C. Mama Coco falls asleep",
+            "D. Miguel leaves the house"
+        ],
+        "Answer": "A",
+        "Hints":[
+            "Hint1: “Music can bring back memories that were never truly lost.”",
+            "Hint2: “A forgotten name begins to return through a familiar song.”"
+        ]
+    },
+    "9":{
+        "Options": [
+            "A. The balloons burst and the house crashes",
+            "B. Carl throws furniture out of the house to make it lighter",
+            "C. Kevin flies away with the balloons",
+            "D. Russell cuts the balloon ropes"
+        ],
+        "Answer": "B",
+        "Hints":[
+            "Hint1: “Carl realizes he must let go of the past to move forward.”",
+            "Hint2: “Something heavy is holding them back—both physically and emotionally.”"
+        ]
+    },
+    "10":{
+        "Options": [
+            "A. The town decides to make Lightning McQueen the new mayor",
+            "B. Lightning McQueen immediately leaves Radiator Springs to reach California",
+            "C. The townspeople celebrate and decide to help him get back to the race",
+            "D. The sheriff arrests Lightning McQueen again"
+        ],
+        "Answer": "C",
+        "Hints":[
+            "Hint1: “Sometimes, helping others makes them want to help you in return.”",
+            "Hint2: “His actions change how the town sees him overnight.”"
+        ]
+    }
+}

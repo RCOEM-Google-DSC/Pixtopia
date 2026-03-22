@@ -30,7 +30,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 const BUCKET_NAME = "round4";
-const VIDEOS_DIR = path.join(__dirname, "../public/round4");
+const VIDEOS_DIR = path.join(__dirname, "../public/Round4");
 
 async function ensureBucket() {
   const { data: buckets } = await supabase.storage.listBuckets();

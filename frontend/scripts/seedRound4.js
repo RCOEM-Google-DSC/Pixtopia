@@ -2,7 +2,8 @@
  * Seed script for Round 4 (Visual Puzzle – Part A)
  *
  * Each puzzle contains 2 images that together hint at a hidden word (rebus-style).
- * Images are read from:  frontend/public/round4/{order}.{1|2}.{png|jpg|webp}
+ * Images are read from:  frontend/public/Round4/{order}-1.png, {order}-2.png
+ * Answers are read from: scripts/round4.json (keys "1" through "7")
  * If a local file is not found, the placeholder URL in the data below is kept.
  *
  * Usage:
@@ -17,6 +18,7 @@ require("dotenv").config({ path: "../.env.local" });
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("fs");
 const path = require("path");
+const round4Answers = require("./round4.json");
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,7 +37,7 @@ const supabase = createClient(
 );
 
 const BUCKET_NAME = "round4";
-const IMAGES_DIR = path.join(__dirname, "../public/round4");
+const IMAGES_DIR = path.join(__dirname, "../public/Round4");
 // Placeholder service used when local images are absent
 const PLACEHOLDER = (w, h, label) =>
   `https://placehold.co/${w}x${h}/1e1e2e/6366f1?text=${encodeURIComponent(label)}`;
@@ -48,26 +50,27 @@ const PLACEHOLDER = (w, h, label) =>
 // image_labels – human labels used for placeholder URLs
 // answer  – the hidden word participants must guess (UPPER-CASE recommended)
 // ─────────────────────────────────────────────────────────────────────────────
-const round4Puzzles = [
-  {
-    order: 1,
-    image_labels: ["Mc", "Queen"],
-    answer: "McQueen",
-    hint: "cars character",
+
+// Generate image_labels by splitting the answer into two halves
+function generateImageLabels(answer) {
+  const mid = Math.ceil(answer.length / 2);
+  return [answer.slice(0, mid), answer.slice(mid)];
+}
+
+// Build puzzles array from round4.json (questions 1-7)
+const round4Puzzles = [];
+for (let order = 1; order <= 7; order++) {
+  const answer = round4Answers[String(order)];
+  const image_labels = generateImageLabels(answer);
+  round4Puzzles.push({
+    order,
+    image_labels,
+    answer,
     points: 100,
-    localFiles: ["cars.jpg", "cars2.png"],
-    image_urls: [PLACEHOLDER(400, 300, "Mc"), PLACEHOLDER(400, 300, "Queen")],
-  },
-  {
-    order: 2,
-    image_labels: ["Woo", "dy"],
-    answer: "Woody",
-    hint: "Toy story character",
-    points: 100,
-    localFiles: ["toys.jpg", "toys2.webp"],
-    image_urls: [PLACEHOLDER(400, 300, "Woo"), PLACEHOLDER(400, 300, "dy")],
-  },
-];
+    localFiles: [`${order}-1.png`, `${order}-2.png`],
+    image_urls: [PLACEHOLDER(400, 300, image_labels[0]), PLACEHOLDER(400, 300, image_labels[1])],
+  });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Storage helpers
