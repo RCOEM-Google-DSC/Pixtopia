@@ -26,9 +26,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const supabase = createClient();
 
-    // Get the initial session
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
+    // Get the initial session from local cookies/storage — NO network call.
+    // Using getSession() instead of getUser() is critical: getUser() makes a
+    // network request to Supabase Auth, and the Supabase client serializes
+    // all auth operations via Web Locks. On the login page, signInWithPassword()
+    // would be BLOCKED until getUser() finishes — and on first visit, with the
+    // 11 MB 3D model downloading, that call gets starved for bandwidth.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
     });
 
