@@ -34,15 +34,16 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
   const autoSkipTriggeredRef = useRef(false);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
-  const [questions, setQuestions] = useState<Question[]>(initialData?.puzzles?.filter((p: any) => p.order >= 4) || []);
+  const [questions, setQuestions] = useState<Question[]>(initialData?.puzzles?.filter((p: any) => p.order >= 8) || []);
   const [roundState, setRoundState] = useState<RoundState | null>(initialData?.roundState || null);
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState<number | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [submitFeedback, setSubmitFeedback] = useState<"correct" | "wrong" | "skipped" | null>(null);
-  const [hintText, setHintText] = useState<string | null>(null);
+  const [hintsRevealed, setHintsRevealed] = useState<string[]>([]);
   const [allDone, setAllDone] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const fetchState = useCallback(async () => {
     setLoading(true);
@@ -65,7 +66,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
 
   const initializeState = useCallback((data: any) => {
     if (!data) return;
-    const partB = data.puzzles.filter((q: Question) => q.order >= 4);
+    const partB = data.puzzles.filter((q: Question) => q.order >= 8);
     setQuestions(partB);
     setRoundState(data.roundState);
     
@@ -81,9 +82,10 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
     setCurrentQIdx(idx);
     
     autoSkipTriggeredRef.current = false;
-    setHintText(null);
+    setHintsRevealed([]);
     setSelectedIndex(undefined);
     setTimeLeft(30); // reset timer
+    setHasSubmitted(false);
   }, []);
 
   useEffect(() => {
@@ -105,9 +107,10 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
     ? !!(roundState?.[`q${currentQuestion.order}_completed` as keyof RoundState])
     : false;
   
-  const currentHintRevealed = currentQuestion
-    ? !!(roundState?.[`q${currentQuestion.order}_hints_revealed` as keyof RoundState])
-    : false;
+  const MAX_HINTS_PER_MCQ = 2;
+  const currentHintsCount = hintsRevealed.length;
+  const availableHintsMCQ = MAX_HINTS_PER_MCQ - currentHintsCount;
+  const allHintsUsed = availableHintsMCQ <= 0;
 
   const handleSkip = useCallback(async () => {
     const cq = questions[currentQIdx];
@@ -133,9 +136,10 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
       if (nextIdx < questions.length) {
         setCurrentQIdx(nextIdx);
         setSelectedIndex(undefined);
-        setHintText(null);
+        setHintsRevealed([]);
         setTimeLeft(30);
         autoSkipTriggeredRef.current = false;
+        setHasSubmitted(false);
       }
     }
 
@@ -179,32 +183,19 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
 
     return () => window.clearTimeout(timer);
   }, [allDone, currentQIdx, handleSkip, loading, questions, roundState, submitting, timeLeft]);
-  const optionsDisabled = submitting || loading || currentQCompleted;
+  const optionsDisabled = submitting || loading || currentQCompleted || hasSubmitted;
 
   const getNextHintCost = useCallback(() => {
-    let count = 0;
-    if (roundState) {
-      for (const key of Object.keys(roundState)) {
-        if (key.endsWith("_hints_revealed")) {
-          const qNumMatch = key.match(/^q(\d+)_/);
-          if (qNumMatch) {
-            const qNum = parseInt(qNumMatch[1], 10);
-            if (qNum >= 4) {
-              const val = (roundState as any)[key];
-              if (val === true) count += 1;
-            }
-          }
-        }
-      }
-    }
-    const costs = [100, 110, 130];
-    return count < costs.length ? costs[count] : 130;
-  }, [roundState]);
+    // Cost based on how many hints used in current question
+    const costs = [100, 110];
+    return currentHintsCount < costs.length ? costs[currentHintsCount] : 110;
+  }, [currentHintsCount]);
 
   const handleSubmit = async () => {
-    if (selectedIndex === undefined || !currentQuestion || submitting || currentQCompleted) return;
+    if (selectedIndex === undefined || !currentQuestion || submitting || currentQCompleted || hasSubmitted) return;
     
     setSubmitting(true);
+    setHasSubmitted(true);
 
     const { round4PartBQuestions } = await import("@/lib/round4PartB");
     const qData = round4PartBQuestions.find((q) => q.order === currentQuestion.order);
@@ -233,9 +224,10 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
           if (nextIdx < questions.length) {
             setCurrentQIdx(nextIdx);
             setSelectedIndex(undefined);
-            setHintText(null);
+            setHintsRevealed([]);
             setSubmitFeedback(null);
             setTimeLeft(30);
+            setHasSubmitted(false);
           }
         }, 1400);
       }
@@ -248,32 +240,42 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
       }).catch(console.error);
 
     } else {
-      toast.error("Wrong answer");
+      toast.error("Wrong answer - locked!");
+      // Keep hasSubmitted = true to lock the answer
     }
     
     setSubmitting(false);
   };
 
   const handleHint = async () => {
-    if (!currentQuestion || currentQCompleted || submitting || currentHintRevealed) return;
+    if (!currentQuestion || currentQCompleted || submitting || allHintsUsed) return;
     
     // 1. Instantly get the static answer data
     const { round4PartBQuestions } = await import("@/lib/round4PartB");
     const qData = round4PartBQuestions.find(q => q.order === currentQuestion.order);
-    if (!qData) return;
+    if (!qData || !qData.hints) return;
 
+    // Check if all hints already used
+    if (currentHintsCount >= qData.hints.length) {
+      toast.warning("All hints used for this question!");
+      return;
+    }
+
+    // Get the next hint in sequence
+    const nextHint = qData.hints[currentHintsCount];
+    
     // 2. Instantly update UI
-    setHintText(qData.hint);
+    setHintsRevealed(prev => [...prev, nextHint]);
     setRoundState(prev => prev ? { 
       ...prev, 
-      [`q${currentQuestion.order}_hints_revealed`]: true,
+      [`q${currentQuestion.order}_hints_revealed`]: currentHintsCount + 1,
     } : null);
 
     // 3. Background Sync (no await)
     fetch("/api/rounds/4/hint", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionOrder: currentQuestion.order }),
+      body: JSON.stringify({ questionOrder: currentQuestion.order, hintIndex: currentHintsCount }),
     }).catch(console.error);
   };
 
@@ -364,7 +366,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                   <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl font-black text-white drop-shadow-lg">
-                        Q{currentQuestion?.order || 4}/{Math.max(1, questions.length) + 3}
+                        Q{currentQuestion?.order || 8}/{Math.max(1, questions.length) + 7}
                       </span>
                       <Badge className="bg-white/30 text-white border border-white/40 font-bold uppercase tracking-wider">
                         PHASE B - VIDEO
@@ -405,12 +407,16 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                     </h2>
                   </div>
 
-                  {/* Hint Display */}
-                  {(hintText || currentHintRevealed) && (
-                    <div className="mx-auto w-full max-w-2xl px-6 py-3 bg-amber-500/20 border-2 border-amber-400/50 rounded-xl text-center backdrop-blur-md shadow-lg">
-                      <p className="text-amber-100 font-bold italic drop-shadow-md">
-                        {hintText || "Hint revealed" }
-                      </p>
+                  {/* Hint Display - Show all revealed hints */}
+                  {hintsRevealed.length > 0 && (
+                    <div className="mx-auto w-full max-w-2xl space-y-2">
+                      {hintsRevealed.map((hint, idx) => (
+                        <div key={idx} className="px-6 py-3 bg-amber-500/20 border-2 border-amber-400/50 rounded-xl text-center backdrop-blur-md shadow-lg">
+                          <p className="text-amber-100 font-bold italic drop-shadow-md">
+                            💡 Hint {idx + 1}: {hint}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -433,14 +439,14 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                         variant="outline"
                         size="lg"
                         onClick={handleHint}
-                        disabled={submitting || loading || currentHintRevealed}
+                        disabled={submitting || loading || allHintsUsed}
                         className="h-auto shrink-0 border-2 px-5 py-2 font-bold uppercase tracking-wider backdrop-blur-md shadow-lg transition-all duration-300 enabled:bg-white/25 enabled:border-white/40 enabled:text-white enabled:hover:bg-white/35 disabled:bg-black/30 disabled:border-black/20 disabled:text-white/40"
                       >
                         <div className="flex flex-col items-center">
                           <div className="flex items-center">
                             <span>💡 HINT</span>
                             <Badge className="ml-2 bg-white/30 text-white border border-white/40">
-                              {currentHintRevealed ? 0 : 1} left
+                              {availableHintsMCQ} left
                             </Badge>
                           </div>
                           <span className="text-xs opacity-90 mt-1 font-semibold bg-black/20 px-2 py-0.5 rounded-full">
@@ -454,7 +460,7 @@ export default function Round4Part2Client({ initialData }: { initialData?: any }
                       <Button
                         size="lg"
                         onClick={handleSubmit}
-                        disabled={selectedIndex === undefined || submitting}
+                        disabled={selectedIndex === undefined || submitting || hasSubmitted}
                         className="h-12 shrink-0 backdrop-blur-md border-2 px-8 font-black uppercase tracking-widest shadow-lg transition-all duration-300 enabled:bg-white/30 enabled:border-white/40 enabled:text-white enabled:hover:bg-white/40 disabled:bg-black/30 disabled:border-black/20 disabled:text-white/40"
                       >
                         {submitting ? "..." : "SUBMIT"}

@@ -66,11 +66,11 @@ async function getInitialState() {
   }
   const uniqueQuestions = Array.from(seen.values())
     .sort((a, b) => a.order - b.order)
-    .slice(0, 6);
+    .slice(0, 7);
 
   const r4 = submission?.round4 || {};
   const puzzles = uniqueQuestions.map((q: any) => {
-    if (q.order >= 4) {
+    if (q.order >= 8) {
       return {
         order: q.order,
         question: q.question || "",
@@ -81,7 +81,8 @@ async function getInitialState() {
       };
     }
 
-    const hints: number[] = r4[`q${q.order}_hints_revealed`] || [];
+    const hintsData = r4[`q${q.order}_hints_revealed`];
+    const hints: number[] = Array.isArray(hintsData) ? hintsData : [];
     const revealedLetters = hints.map((idx: number) => ({
       index: idx,
       char: q.answer ? q.answer[idx] : "",
@@ -100,10 +101,10 @@ async function getInitialState() {
     points_spent: r4.points_spent || 0,
   };
 
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 10; i++) {
     roundState[`q${i}_completed`] = r4[`q${i}_completed`] || false;
     roundState[`q${i}_hints_revealed`] =
-      r4[`q${i}_hints_revealed`] || (i >= 4 ? false : []);
+      r4[`q${i}_hints_revealed`] || (i >= 8 ? false : []);
   }
 
   return {

@@ -24,4 +24,10 @@ export const round4PartAQuestions: Round4PartAQuestion[] = [
     hint: "Toy story character",
     points: 100,
   },
+  {
+    order: 3,
+    answer: "Buzz",
+    hint: "Toy Story astronaut",
+    points: 100,
+  },
 ];

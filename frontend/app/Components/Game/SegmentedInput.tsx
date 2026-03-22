@@ -7,6 +7,7 @@ interface SegmentedInputProps {
   value: string;
   onChange: (value: string) => void;
   revealedIndices?: number[];
+  disabled?: boolean;
 }
 
 const SegmentedInput: React.FC<SegmentedInputProps> = ({
@@ -14,6 +15,7 @@ const SegmentedInput: React.FC<SegmentedInputProps> = ({
   value,
   onChange,
   revealedIndices = [],
+  disabled = false,
 }) => {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -55,11 +57,13 @@ const SegmentedInput: React.FC<SegmentedInputProps> = ({
             type="text"
             maxLength={1}
             value={char || ""}
-            readOnly={isRevealed}
+            readOnly={isRevealed || disabled}
+            disabled={disabled}
             onChange={(e) => handleChange(e, i)}
             onKeyDown={(e) => handleKeyDown(e, i)}
             aria-label={`Letter ${i + 1}`}
             className={`w-10 h-14 sm:w-12 sm:h-16 bg-transparent border-0 border-b-4 rounded-none text-center text-2xl sm:text-4xl font-black outline-none transition-all
+              ${disabled ? "opacity-50 cursor-not-allowed" : ""}
               ${isRevealed ? "border-black text-black" : "border-white/70 text-white focus:border-white focus:text-white pb-1"}
             `}
             style={{ boxShadow: "none" }}

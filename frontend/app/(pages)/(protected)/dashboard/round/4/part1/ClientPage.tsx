@@ -10,6 +10,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import SegmentedInput from "@/app/Components/Game/SegmentedInput";
+import { toast } from "sonner";
+
+// Local answers for instant hint generation (no API call needed)
+const ROUND4_ANSWERS: Record<number, string> = {
+  1: "Up",
+  2: "Ratatouille",
+  3: "Coco",
+  4: "Finding Nemo",
+  5: "Cars",
+  6: "Elemental",
+  7: "Toy Story",
+};
 
 interface Puzzle {
   order: number;
@@ -35,7 +47,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
   const autoSkipTriggeredRef = useRef(false);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
-  const [puzzles, setPuzzles] = useState<Puzzle[]>(initialData?.puzzles ? initialData.puzzles.filter((p: any) => p.order <= 3) : []);
+  const [puzzles, setPuzzles] = useState<Puzzle[]>(initialData?.puzzles ? initialData.puzzles.filter((p: any) => p.order <= 7) : []);
   const [roundState, setRoundState] = useState<RoundState | null>(initialData?.roundState || null);
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [answer, setAnswer] = useState("");
@@ -46,6 +58,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
   >(null);
   const [allDone, setAllDone] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const allPartAImageUrls = useMemo(() => {
     const urls = puzzles
@@ -56,9 +69,8 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
 
   const applyPuzzleState = useCallback((puz: Puzzle, rs: RoundState) => {
     autoSkipTriggeredRef.current = false;
-    const hints: number[] =
-      (rs[`q${puz.order}_hints_revealed` as keyof RoundState] as number[]) ||
-      [];
+    const hintsData = rs[`q${puz.order}_hints_revealed` as keyof RoundState];
+    const hints: number[] = Array.isArray(hintsData) ? hintsData : [];
     setRevealedIndices(hints);
     const ans = Array(puz.answer_length).fill(".");
     (puz.revealed_letters || []).forEach((l) => {
@@ -66,6 +78,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
     });
     setAnswer(ans.join(""));
     setTimeLeft(30); // reset timer
+    setHasSubmitted(false); // reset submission lock
   }, []);
 
   const fetchState = useCallback(async () => {
@@ -89,7 +102,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
 
   const initializeState = useCallback((data: any) => {
     if (!data) return;
-    const partAPuzzles = data.puzzles.filter((p: any) => p.order <= 3);
+    const partAPuzzles = data.puzzles.filter((p: any) => p.order <= 7);
     setPuzzles(partAPuzzles);
     setRoundState(data.roundState);
 
@@ -152,25 +165,30 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
 
   const handleSkip = useCallback(async () => {
     const currentPuzzle = puzzles[currentQIdx];
-    if (!currentPuzzle || submitting) return;
+    if (!currentPuzzle || submitting || hasSubmitted) return;
     const isCompleted = !!roundState?.[`q${currentPuzzle.order}_completed` as keyof RoundState];
     if (isCompleted) return;
 
+    setHasSubmitted(true); // Lock further submissions
     setSubmitting(true);
     setSubmitFeedback(null);
+    
+    // Submit current answer (whatever user typed, or empty if nothing)
+    const currentAnswer = answer.replace(/\./g, ""); // Remove placeholders
+    
     try {
       const res = await fetch("/api/rounds/4/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          answer: "", 
+          answer: currentAnswer, 
           questionOrder: currentPuzzle.order,
           skipped: true 
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setSubmitFeedback("skipped");
+        setSubmitFeedback(data.correct ? "correct" : "skipped");
         const updatedRS = {
           ...roundState!,
           [`q${currentPuzzle.order}_completed`]: true,
@@ -193,14 +211,16 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
           }, 1400);
         }
       } else {
-        setError(data.error || "Auto-skip failed");
+        setError(data.error || "Auto-submit failed");
+        setHasSubmitted(false); // Allow retry on error
       }
     } catch {
-      setError("Auto-skip failed");
+      setError("Auto-submit failed");
+      setHasSubmitted(false); // Allow retry on error
     } finally {
       setSubmitting(false);
     }
-  }, [applyPuzzleState, currentQIdx, puzzles, roundState, submitting]);
+  }, [answer, applyPuzzleState, currentQIdx, hasSubmitted, puzzles, roundState, submitting]);
 
   // Timer logic: tick down with a single timeout and auto-skip exactly once at expiry.
   useEffect(() => {
@@ -244,52 +264,64 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
     !answer.includes(".") &&
     answer.length > 0 &&
     !submitting &&
-    !currentQCompleted;
+    !currentQCompleted &&
+    !hasSubmitted;
 
   const handleSubmit = async () => {
-    if (!canSubmit || !currentPuzzle) return;
-    setSubmitting(true);
-    setSubmitFeedback(null);
-    try {
-      const res = await fetch("/api/rounds/4/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answer, questionOrder: currentPuzzle.order }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSubmitFeedback("correct");
-        const updatedRS = {
-          ...roundState!,
-          [`q${currentPuzzle.order}_completed`]: true,
-          is_completed: data.allDone,
-        } as RoundState;
-        setRoundState(updatedRS);
-        if (data.allDone) {
-          setTimeout(() => setAllDone(true), 1200);
-        } else {
-          // Advance to the next puzzle after a brief success pause
-          setTimeout(() => {
-            const nextIdx = currentQIdx + 1;
-            if (nextIdx < puzzles.length) {
-              setCurrentQIdx(nextIdx);
-              applyPuzzleState(puzzles[nextIdx], updatedRS);
-              setSubmitFeedback(null);
-            } else {
-              setAllDone(true);
-            }
-          }, 1400);
-        }
-      } else {
-        setSubmitFeedback("wrong");
-        setTimeout(() => setSubmitFeedback(null), 3000);
-      }
-    } catch {
-      setSubmitFeedback("wrong");
-      setTimeout(() => setSubmitFeedback(null), 3000);
-    } finally {
-      setSubmitting(false);
+    if (!canSubmit || !currentPuzzle || hasSubmitted) return;
+    
+    setHasSubmitted(true); // Lock further submissions immediately
+    
+    // Optimistic check: validate answer locally first
+    const correctAnswer = ROUND4_ANSWERS[currentPuzzle.order];
+    if (!correctAnswer) {
+      toast.error("Question data unavailable");
+      setHasSubmitted(false);
+      return;
     }
+    
+    const isCorrect = answer.toLowerCase() === correctAnswer.toLowerCase();
+    
+    // Instantly update UI
+    setSubmitFeedback(isCorrect ? "correct" : "wrong");
+    
+    if (isCorrect) {
+      const isAllDone = currentQIdx + 1 >= puzzles.length;
+      const updatedRS = {
+        ...roundState!,
+        [`q${currentPuzzle.order}_completed`]: true,
+        is_completed: isAllDone,
+      } as RoundState;
+      setRoundState(updatedRS);
+      
+      if (isAllDone) {
+        setTimeout(() => setAllDone(true), 1200);
+      } else {
+        setTimeout(() => {
+          const nextIdx = currentQIdx + 1;
+          if (nextIdx < puzzles.length) {
+            setCurrentQIdx(nextIdx);
+            applyPuzzleState(puzzles[nextIdx], updatedRS);
+            setSubmitFeedback(null);
+          } else {
+            setAllDone(true);
+          }
+        }, 1400);
+      }
+    } else {
+      // Wrong answer - keep locked
+      setTimeout(() => setSubmitFeedback(null), 3000);
+    }
+    
+    // Background sync (no await needed)
+    fetch("/api/rounds/4/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answer, questionOrder: currentPuzzle.order }),
+    }).catch((err) => {
+      console.error("Submit sync failed:", err);
+      // Don't unlock on network error - answer was already checked locally
+    });
   };
 
   const handleAnswerChange = (newAnswer: string) => {
@@ -297,39 +329,86 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
     if (submitFeedback === "wrong") setSubmitFeedback(null);
   };
 
-  const handleHint = async () => {
-    if (!currentPuzzle || currentQCompleted || availableHints === 0) return;
-    try {
-      const res = await fetch("/api/rounds/4/hint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentAnswer: answer,
-          questionOrder: currentPuzzle.order,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const newRevealed = [...revealedIndices, data.revealedIndex];
-        setRevealedIndices(newRevealed);
-        const arr = answer.split("");
-        while (arr.length < currentPuzzle.answer_length) arr.push(".");
-        arr[data.revealedIndex] = data.revealedChar;
-        setAnswer(arr.join(""));
-        setRoundState((prev) =>
-          prev
-            ? {
-                ...prev,
-                [`q${currentPuzzle.order}_hints_revealed`]: newRevealed,
-              }
-            : prev,
-        );
-      } else {
-        alert(data.error || "Failed to get hint");
-      }
-    } catch {
-      alert("Network error");
+  const handleHint = () => {
+    if (!currentPuzzle || currentQCompleted) return;
+    
+    const correctAnswer = ROUND4_ANSWERS[currentPuzzle.order];
+    if (!correctAnswer) return;
+
+    // Check if all letters are already filled correctly
+    const currentArr = answer.split("");
+    const allFilled = currentArr.every((char, idx) => 
+      char !== "." && char.toLowerCase() === correctAnswer[idx]?.toLowerCase()
+    );
+    
+    if (allFilled) {
+      toast.info("All letters are already filled!");
+      return;
     }
+
+    if (availableHints === 0) {
+      toast.warning("No hints remaining for this question!");
+      return;
+    }
+
+    // Find the next character to reveal:
+    // 1. Find the first position where user hasn't typed correctly
+    let revealIndex = -1;
+    for (let i = 0; i < correctAnswer.length; i++) {
+      // Skip already revealed positions
+      if (revealedIndices.includes(i)) continue;
+      
+      // If no input at this position or wrong input, reveal it
+      if (!currentArr[i] || currentArr[i] === "." || 
+          currentArr[i].toLowerCase() !== correctAnswer[i].toLowerCase()) {
+        revealIndex = i;
+        break;
+      }
+    }
+
+    // If all remaining positions are correct, find any unrevealed position
+    if (revealIndex === -1) {
+      for (let i = 0; i < correctAnswer.length; i++) {
+        if (!revealedIndices.includes(i)) {
+          revealIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (revealIndex === -1) {
+      toast.info("No more hints available!");
+      return;
+    }
+
+    const revealedChar = correctAnswer[revealIndex];
+    const newRevealed = [...revealedIndices, revealIndex];
+    
+    // Instantly update UI
+    setRevealedIndices(newRevealed);
+    const arr = answer.split("");
+    while (arr.length < currentPuzzle.answer_length) arr.push(".");
+    arr[revealIndex] = revealedChar;
+    setAnswer(arr.join(""));
+    setRoundState((prev) =>
+      prev
+        ? {
+            ...prev,
+            [`q${currentPuzzle.order}_hints_revealed`]: newRevealed,
+          }
+        : prev,
+    );
+
+    // Background sync to server (no await needed)
+    fetch("/api/rounds/4/hint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentAnswer: answer,
+        questionOrder: currentPuzzle.order,
+        revealedIndex: revealIndex,
+      }),
+    }).catch(console.error);
   };
 
   return (
@@ -527,6 +606,7 @@ export default function Round4Part1Client({ initialData }: { initialData?: any }
                         value={answer}
                         onChange={handleAnswerChange}
                         revealedIndices={revealedIndices}
+                        disabled={hasSubmitted || currentQCompleted}
                       />
                     ) : (
                       <div className="flex h-14 items-center justify-center text-white/50">

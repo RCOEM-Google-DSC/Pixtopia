@@ -6,7 +6,7 @@ export interface Round4PartBQuestion {
   video_url: string;
   options: string[];
   correct_index: number;
-  hint: string;
+  hints: string[];
   hint_cost: number;
   points: number;
 }
