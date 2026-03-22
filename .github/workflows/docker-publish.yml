@@ -1,0 +1,43 @@
+name: Build & Push to Docker Hub
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            rohit1911/pixtopia:latest
+            rohit1911/pixtopia:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+            NEXT_PUBLIC_IS_DEV=${{ secrets.NEXT_PUBLIC_IS_DEV }}
+            NEXT_PUBLIC_ADMIN_EMAIL=${{ secrets.NEXT_PUBLIC_ADMIN_EMAIL }}
+            NEXT_PUBLIC_ADMIN_PASS=${{ secrets.NEXT_PUBLIC_ADMIN_PASS }}
+            NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
+            NEXT_PUBLIC_HACKERRANK_CONTEST_URL_1=${{ secrets.NEXT_PUBLIC_HACKERRANK_CONTEST_URL_1 }}
+            NEXT_PUBLIC_HACKERRANK_CONTEST_URL_2=${{ secrets.NEXT_PUBLIC_HACKERRANK_CONTEST_URL_2 }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
