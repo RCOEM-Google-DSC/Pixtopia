@@ -452,7 +452,7 @@ export default function LoginPage() {
                   <path d="M11.0833 7H2.91667" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.16667" />
                 </svg>
               </div>
-              <span className="text-[10px] md:text-[12.8px] text-white tracking-[1.28px]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>BACK</span>
+              <span className="text-[10px] md:text-[12.8px] text-white tracking-[1.28px]">BACK</span>
             </a>
 
             {/* EVE 3D floating behind the form */}
@@ -501,7 +501,6 @@ export default function LoginPage() {
                 {/* Title */}
                 <h1
                   className="text-[20px] sm:text-[28px] md:text-[36px] text-center text-white tracking-[0.1em] leading-tight mb-6 md:mb-8 font-medium"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   Authenticate to &ldquo;Enter the World&rdquo;
                 </h1>
@@ -517,7 +516,6 @@ export default function LoginPage() {
                   <div className="mb-4 md:mb-6">
                     <label
                       className="text-[14px] sm:text-[18px] md:text-[24px] text-white tracking-[0.1em] block mb-2 font-medium"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       Enter Leader&apos;s Email:
                     </label>
@@ -536,7 +534,6 @@ export default function LoginPage() {
                   <div className="mb-6 md:mb-8">
                     <label
                       className="text-[14px] sm:text-[18px] md:text-[24px] text-white tracking-[0.1em] block mb-2 font-medium"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
                       Password:
                     </label>
@@ -557,7 +554,6 @@ export default function LoginPage() {
                     id="login-btn"
                     disabled={loading}
                     className="w-full bg-white border border-solid border-white rounded-[8px] h-[45px] md:h-[51px] text-[16px] sm:text-[20px] md:text-[24px] text-black tracking-[0.1em] hover:bg-gray-100 transition-colors disabled:opacity-50 font-medium"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {loading ? "Signing in…" : "Submit"}
                   </button>
