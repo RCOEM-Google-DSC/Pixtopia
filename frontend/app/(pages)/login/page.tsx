@@ -280,14 +280,18 @@ export default function LoginPage() {
     setModelLoaded(true);
   }, []);
 
-  // STEP 1: Warm up Supabase connection BEFORE loading the 11 MB 3D model.
-  // This ensures the TLS handshake + HTTP/2 connection to Supabase is fully
-  // established before the model download saturates the bandwidth.
+  // STEP 1: Warm up Supabase connection with a REAL network request BEFORE
+  // loading the 11 MB 3D model. getSession() is local-only (reads memory) and
+  // doesn't establish any network connection. We need an actual HTTP request
+  // to force DNS + TCP + TLS handshake so signInWithPassword() is instant later.
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(() => {
-      setSupabaseReady(true);
-    });
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+
+    // Lightweight GET that forces the full connection setup
+    fetch(`${supabaseUrl}/auth/v1/settings`, { mode: "cors" })
+      .catch(() => {}) // ignore errors — we just want the connection warm
+      .finally(() => setSupabaseReady(true));
+
     // Also prefetch the dashboard page
     router.prefetch("/dashboard");
   }, []);
@@ -319,19 +323,19 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
 
-      // For admin: call the API to bootstrap the account if it doesn't exist yet
+      // For admin: bootstrap the account in parallel (don't block sign-in)
       const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
       if (adminEmail && email === adminEmail) {
-        await fetch("/api/auth/login", {
+        // Fire-and-forget — don't await. The account almost certainly
+        // exists already; this is just a safety net for first-ever login.
+        fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
-        });
-        // Ignore result — we'll auth via client below anyway
+        }).catch(() => {});
       }
 
-      // Direct client-side sign-in — skips the Docker server round-trip
-      // @supabase/ssr browser client handles cookies automatically
+      // Direct client-side sign-in — no Docker round-trip
       const { error: authErr } = await supabase.auth.signInWithPassword({
         email,
         password,

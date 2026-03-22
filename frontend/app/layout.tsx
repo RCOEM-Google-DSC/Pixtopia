@@ -35,8 +35,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${bebasNeue.variable}`}>
       <head>
-        {/* Pre-connect to Supabase so auth calls are fast on first visit */}
-        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
+        {/* Pre-connect to Supabase — crossOrigin is required because auth
+            API calls are CORS requests; without it the connection can't be reused */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
