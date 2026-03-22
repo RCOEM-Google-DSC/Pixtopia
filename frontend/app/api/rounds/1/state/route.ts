@@ -91,12 +91,21 @@ export async function GET(_request: NextRequest) {
       is_completed: isCompleted,
     };
 
+    // Get round started time from game_state
+    const { data: gs } = await admin
+      .from("game_state")
+      .select("round_statuses")
+      .limit(1)
+      .single();
+    const roundStartedAt = gs?.round_statuses?.["1"]?.startedAt || null;
+
     return NextResponse.json({
       questions: questions ?? [],
       teamProgress,
       teamPoints: team.points,
       roundScore: r1.score || 0,
       answers,
+      roundStartedAt,
     });
   } catch (err: any) {
     console.error("Round 1 state error:", err);

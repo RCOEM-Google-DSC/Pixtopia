@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useTeam } from "@/lib/useTeam";
+import { subscribeToGameState, GameState } from "@/lib/database";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock } from "lucide-react";
+import { Clock, Lock, AlertCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +41,7 @@ interface R3State {
   startTimes: Record<number, number>;    // currentQ index → Date.now()
   hintsPerQuestion: Record<string, number>;
   completed: boolean;
+  roundStartedAt?: string;
 }
 
 function loadLS(): R3State {
@@ -57,7 +60,9 @@ function saveLS(state: R3State) {
 
 export default function Round3Page() {
   const { team, loading: teamLoading } = useTeam();
+  const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [requestingHint, setRequestingHint] = useState(false);
@@ -83,6 +88,12 @@ export default function Round3Page() {
   useEffect(() => { answerLockedRef.current = answerLocked; }, [answerLocked]);
   useEffect(() => { currentQuestionIndexRef.current = currentQuestionIndex; }, [currentQuestionIndex]);
 
+  // ── Subscribe to gameState ──
+  useEffect(() => {
+    const unsub = subscribeToGameState(setGameState);
+    return () => unsub();
+  }, []);
+
   // ── Fetch questions + restore from localStorage ──
   useEffect(() => {
     fetch("/api/rounds/3/state")
@@ -95,14 +106,34 @@ export default function Round3Page() {
         const ls = loadLS();
         lsRef.current = ls;
 
+        // Bug fix #4: clear stale localStorage if round was restarted
+        const serverStartedAt = data.roundStartedAt || null;
+        if (ls.roundStartedAt && serverStartedAt && ls.roundStartedAt !== serverStartedAt) {
+          // Round was restarted — clear old data
+          const freshLS: R3State = { currentQ: 0, answers: {}, startTimes: {}, hintsPerQuestion: {}, completed: false, roundStartedAt: serverStartedAt };
+          saveLS(freshLS);
+          lsRef.current = freshLS;
+          const now = Date.now();
+          startTimestampRef.current = now;
+          freshLS.startTimes[0] = now;
+          saveLS(freshLS);
+          setLoading(false);
+          return;
+        }
+        // Store roundStartedAt for future comparisons
+        if (serverStartedAt && !ls.roundStartedAt) {
+          ls.roundStartedAt = serverStartedAt;
+          saveLS(ls);
+        }
+
         if (ls.completed || data.teamProgress?.is_completed) {
           setCompleted(true);
           setRoundScore(data.roundScore ?? 0);
+          setHintsPerQuestion(ls.hintsPerQuestion || data.teamProgress?.hints_per_question || {});
 
           // If server has is_correct data, we're good. If not, retry.
           const hasCorrectData = (data.questions || []).some((q: any) => q.is_correct !== undefined);
           if (!hasCorrectData) {
-            // Server hasn't processed all answers yet — retry
             setTimeout(() => fetchFinalResults(), 1500);
           }
         } else {
@@ -292,6 +323,9 @@ export default function Round3Page() {
     }
   };
 
+  // ── Round status ──
+  const roundStatus = gameState?.round_statuses?.["3"]?.status ?? "locked";
+
   // ── Loading ──
   if (loading || teamLoading) {
     return (
@@ -303,6 +337,32 @@ export default function Round3Page() {
               <Skeleton key={i} className="aspect-video rounded-xl bg-zinc-900" />
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (roundStatus === "locked") {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <div className="text-center">
+          <Lock size={36} className="text-zinc-600 mx-auto mb-4" />
+          <h2 className="text-xl font-bold tracking-wide">ROUND 3 LOCKED</h2>
+          <p className="text-zinc-500 text-sm mt-2">Waiting for the admin to start this round.</p>
+          <button onClick={() => router.push("/dashboard")} className="mt-6 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 rounded-lg text-sm tracking-wide transition-colors">← Back</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (roundStatus === "completed" && !completed) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <div className="text-center">
+          <AlertCircle size={36} className="text-zinc-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold tracking-wide">ROUND 3 ENDED</h2>
+          <p className="text-zinc-500 text-sm mt-2">Submissions are closed.</p>
+          <button onClick={() => router.push("/dashboard")} className="mt-6 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 rounded-lg text-sm tracking-wide transition-colors">← Back</button>
         </div>
       </div>
     );

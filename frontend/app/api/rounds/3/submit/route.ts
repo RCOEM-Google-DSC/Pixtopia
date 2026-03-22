@@ -83,10 +83,10 @@ export async function POST(request: NextRequest) {
   const newQuestionsAnswered = Object.keys(answers).length;
   const isRoundComplete = newQuestionsAnswered >= TOTAL_QUESTIONS;
 
-  const { error: teamUpdateError } = await admin
-    .from("teams")
-    .update({ points: team.points + awardedPoints })
-    .eq("id", team.id);
+  const { error: teamUpdateError } = await admin.rpc('increment_team_points', {
+    team_id_input: team.id,
+    points_delta: awardedPoints,
+  });
 
   if (teamUpdateError) {
     return NextResponse.json({ error: teamUpdateError.message }, { status: 500 });

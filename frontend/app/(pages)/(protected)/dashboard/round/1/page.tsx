@@ -52,6 +52,7 @@ interface R1State {
   answers: Record<string, number>;     // questionId → selected option index
   startTimes: Record<number, number>;  // questionIndex → Date.now() timestamp
   completed: boolean;
+  roundStartedAt?: string;
 }
 
 function loadLS(): R1State {
@@ -116,9 +117,25 @@ export default function Round1Page() {
         const ls = loadLS();
         lsRef.current = ls;
 
+        // Bug fix #4: clear stale localStorage if round was restarted
+        const serverStartedAt = data.roundStartedAt || null;
+        if (ls.roundStartedAt && serverStartedAt && ls.roundStartedAt !== serverStartedAt) {
+          const freshLS: R1State = { currentQ: 0, answers: {}, startTimes: {}, completed: false, roundStartedAt: serverStartedAt };
+          saveLS(freshLS);
+          lsRef.current = freshLS;
+          const now = Date.now();
+          startTimestampRef.current = now;
+          freshLS.startTimes[0] = now;
+          saveLS(freshLS);
+          return;
+        }
+        if (serverStartedAt && !ls.roundStartedAt) {
+          ls.roundStartedAt = serverStartedAt;
+          saveLS(ls);
+        }
+
         if (ls.completed) {
           setCompleted(true);
-          // Calculate score from saved answers
           let s = 0;
           shuffled.forEach((q) => {
             if (ls.answers[q.id] === q.correct_index) s += q.points;
@@ -126,13 +143,11 @@ export default function Round1Page() {
           setScore(s);
         } else {
           setCurrentQ(ls.currentQ);
-          // Restore locked answer for current question
           const cq = shuffled[ls.currentQ];
           if (cq && ls.answers[cq.id] !== undefined) {
             setSelectedOption(ls.answers[cq.id]);
             setAnswerLocked(true);
           }
-          // Restore or set timer start
           if (ls.startTimes[ls.currentQ]) {
             startTimestampRef.current = ls.startTimes[ls.currentQ];
           } else {

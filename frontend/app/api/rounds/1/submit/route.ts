@@ -89,27 +89,13 @@ export async function POST(request: NextRequest) {
     if (isCorrect) {
       pointsAwarded = question.points || 0;
       if (pointsAwarded > 0) {
-        await admin
-          .from("teams")
-          .update({ points: team.points + pointsAwarded })
-          .eq("id", team.id);
+        // Atomic increment to avoid race conditions
+        await admin.rpc('increment_team_points', { team_id_input: team.id, points_delta: pointsAwarded });
       }
     }
 
-    // Calculate total round score
-    let totalScore = 0;
-    const { data: allQuestions } = await admin
-      .from("questions")
-      .select("id, correct_index, points")
-      .eq("round_id", "1");
-
-    if (allQuestions) {
-      for (const q of allQuestions) {
-        if (answers[q.id] === q.correct_index) {
-          totalScore += q.points || 0;
-        }
-      }
-    }
+    // Accumulate score incrementally (don't recalculate — indices are shuffled per-user)
+    const totalScore = (r1.score || 0) + pointsAwarded;
 
     // Only advance current_question when timer expires (setNextStartTime=true)
     let newCurrentQ = currentQ;

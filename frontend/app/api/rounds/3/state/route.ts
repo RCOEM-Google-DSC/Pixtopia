@@ -88,11 +88,20 @@ export async function GET(_request: NextRequest) {
       return qObj;
     }) ?? [];
 
+    // Get round started time from game_state
+    const { data: gs } = await admin
+      .from("game_state")
+      .select("round_statuses")
+      .limit(1)
+      .single();
+    const roundStartedAt = gs?.round_statuses?.["3"]?.startedAt || null;
+
     return NextResponse.json({
       questions: questionsWithHintPoint,
       teamProgress,
       teamPoints: team.points,
-      roundScore: r3.score || 0
+      roundScore: r3.score || 0,
+      roundStartedAt
     });
   } catch (err: any) {
     console.error("DEBUG ERR:", err);
