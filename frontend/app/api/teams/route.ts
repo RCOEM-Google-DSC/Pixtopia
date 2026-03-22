@@ -53,8 +53,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(data ?? [], {
     headers: {
-      // Allow CDN / edge to cache for 2s, serve stale for up to 10s while revalidating
-      "Cache-Control": "public, s-maxage=2, stale-while-revalidate=10",
+      "Cache-Control": "no-store",
     },
   });
 }

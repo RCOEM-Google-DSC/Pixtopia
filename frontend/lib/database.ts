@@ -308,7 +308,7 @@ export function subscribeToLeaderboard(
 
   const fetchAndEmit = async () => {
     try {
-      const res = await fetch("/api/teams");
+      const res = await fetch("/api/teams", { cache: "no-store" });
       if (!res.ok) {
         callback([]);
         return;
@@ -320,7 +320,7 @@ export function subscribeToLeaderboard(
     }
   };
 
-  // Fetch initial data immediately
+  // Fetch initial data
   fetchAndEmit();
 
   const channel: RealtimeChannel = supabase
@@ -333,7 +333,6 @@ export function subscribeToLeaderboard(
         table: "teams",
       },
       () => {
-        // Re-fetch full sorted leaderboard on any team update
         fetchAndEmit();
       },
     )
