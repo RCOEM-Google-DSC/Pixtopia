@@ -312,6 +312,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Invalid login credentials");
+        setLoading(false);
         return;
       }
 
@@ -322,13 +323,14 @@ export default function LoginPage() {
       });
       if (clientErr) {
         setError(clientErr.message);
+        setLoading(false);
         return;
       }
 
       router.push("/dashboard");
+      // Intentionally not setting loading to false so the UI stays in loading state during transition
     } catch {
       setError("Failed to connect. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
