@@ -58,14 +58,15 @@ export async function GET(_request: NextRequest) {
 
     const r1 = submission?.round1 || {};
     const answers = r1.answers || {};
+    const currentQuestion = r1.current_question ?? 0; // only incremented on timer expiry
     const questionsAnswered = Object.keys(answers).length;
     const isCompleted = r1.is_completed === true;
 
     let startTimes = r1.question_start_times || {};
     let needsUpsert = false;
 
-    // If not completed, set start time for the current question
-    const currentQOrder = questionsAnswered + 1;
+    // If not completed, set start time for the current question (1-indexed)
+    const currentQOrder = currentQuestion + 1;
     if (!isCompleted && currentQOrder <= totalQuestions && !startTimes[currentQOrder]) {
       startTimes[currentQOrder] = new Date().toISOString();
       needsUpsert = true;
@@ -84,6 +85,7 @@ export async function GET(_request: NextRequest) {
     }
 
     const teamProgress = {
+      current_question: currentQuestion,
       questions_answered: questionsAnswered,
       question_start_times: startTimes,
       is_completed: isCompleted,

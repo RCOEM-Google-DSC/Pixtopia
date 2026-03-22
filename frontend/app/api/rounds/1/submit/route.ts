@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { questionId, selectedIndex, setNextStartTime } = await request.json();
+    const { questionId, selectedIndex, selectedAnswer, setNextStartTime } = await request.json();
 
     const admin = await createAdminClient();
 
@@ -78,11 +78,15 @@ export async function POST(request: NextRequest) {
     // Record the answer
     answers[questionId] = selectedIndex;
     const questionsAnswered = Object.keys(answers).length;
+    const currentQ = r1.current_question ?? 0;
     const isRoundComplete = questionsAnswered >= (totalQuestions ?? 0);
 
-    // Calculate if correct and add points
+    // Check correctness by matching answer TEXT (options are shuffled on frontend)
+    const correctAnswerText = question.options?.[question.correct_index];
+    const isCorrect = selectedAnswer !== null && selectedAnswer !== undefined && selectedAnswer === correctAnswerText;
+
     let pointsAwarded = 0;
-    if (selectedIndex !== null && selectedIndex === question.correct_index) {
+    if (isCorrect) {
       pointsAwarded = question.points || 0;
       if (pointsAwarded > 0) {
         await admin
@@ -107,14 +111,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Only set start time for next question if explicitly requested
-    // (i.e., when the timer expires, not when the user manually answers)
+    // Only advance current_question when timer expires (setNextStartTime=true)
+    let newCurrentQ = currentQ;
     let nextStartTimeStr = undefined;
-    if (setNextStartTime && !isRoundComplete) {
-      const nextQOrder = questionsAnswered + 1;
-      if (!startTimes[nextQOrder]) {
-        nextStartTimeStr = new Date().toISOString();
-        startTimes[nextQOrder] = nextStartTimeStr;
+    if (setNextStartTime) {
+      newCurrentQ = currentQ + 1;
+      if (!isRoundComplete) {
+        const nextQOrder = newCurrentQ + 1;
+        if (!startTimes[nextQOrder]) {
+          nextStartTimeStr = new Date().toISOString();
+          startTimes[nextQOrder] = nextStartTimeStr;
+        }
       }
     }
 
@@ -123,6 +130,7 @@ export async function POST(request: NextRequest) {
       ...r1,
       answers,
       score: totalScore,
+      current_question: newCurrentQ,
       question_start_times: startTimes,
       is_completed: isRoundComplete,
       ...(isRoundComplete ? { submitted_at: new Date().toISOString() } : {}),
@@ -137,7 +145,7 @@ export async function POST(request: NextRequest) {
     await admin.from("submissions").upsert(payload, { onConflict: "team_id" });
 
     return NextResponse.json({
-      correct: selectedIndex === question.correct_index,
+      correct: isCorrect,
       pointsAwarded,
       questionsAnswered,
       isRoundComplete,

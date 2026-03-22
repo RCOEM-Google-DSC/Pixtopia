@@ -11,8 +11,9 @@ import {
 import { Clock, CheckCircle, AlertCircle, Lock } from "lucide-react";
 
 const PER_Q_SECONDS = 80;
+const LS_KEY = "pixtopia_r1";
 
-// ─── Seeded deterministic shuffle (Fisher-Yates with LCG PRNG) ───────────────
+// ─── Seeded deterministic shuffle ─────────────────────────────────────────────
 function strToSeed(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -35,7 +36,6 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
 function shuffleForUser(questions: Question[], uid: string): Question[] {
   const qSeed = strToSeed(uid);
   const shuffledQs = seededShuffle(questions, qSeed);
-
   return shuffledQs.map((q) => {
     if (!q.options || q.options.length === 0) return q;
     const optSeed = strToSeed(uid + q.id);
@@ -46,12 +46,31 @@ function shuffleForUser(questions: Question[], uid: string): Question[] {
   });
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface TeamProgress {
-  questions_answered: number;
-  question_start_times: Record<string, string>;
-  is_completed: boolean;
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+interface R1State {
+  currentQ: number;
+  answers: Record<string, number>;     // questionId → selected option index
+  startTimes: Record<number, number>;  // questionIndex → Date.now() timestamp
+  completed: boolean;
 }
+
+function loadLS(): R1State {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { currentQ: 0, answers: {}, startTimes: {}, completed: false };
+}
+
+function saveLS(state: R1State) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch { /* ignore */ }
+}
+
+function clearLS() {
+  try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export default function Round1Page() {
   const { user } = useAuth();
@@ -59,101 +78,88 @@ export default function Round1Page() {
   const router = useRouter();
 
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [progress, setProgress] = useState<TeamProgress | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentQ, setCurrentQ] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [answerLocked, setAnswerLocked] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(PER_Q_SECONDS);
+  const [completed, setCompleted] = useState(false);
+  const [score, setScore] = useState(0);
 
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
   const timerDoneRef = useRef(false);
-
-  const [roundScore, setRoundScore] = useState(0);
-  const [savedAnswers, setSavedAnswers] = useState<Record<string, number>>({});
-
+  const currentQRef = useRef(0);
   const selectedOptionRef = useRef<number | null>(null);
   const answerLockedRef = useRef(false);
-  const currentQuestionIndexRef = useRef(0);
+  const startTimestampRef = useRef<number | null>(null);
+  const lsRef = useRef<R1State>(loadLS());
 
-  const TOTAL_QUESTIONS = questions.length;
+  const TOTAL = questions.length;
 
-  // ── Fetch state from per-team API ──
-  const fetchState = async () => {
-    try {
-      const res = await fetch("/api/rounds/1/state");
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("API error:", data);
-        throw new Error(data.error || "Failed to fetch state");
-      }
-      const shuffled = user ? shuffleForUser(data.questions || [], user.id) : (data.questions || []);
-      setQuestions(shuffled);
-      setProgress(data.teamProgress);
-      setRoundScore(data.roundScore ?? 0);
-      setSavedAnswers(data.answers ?? {});
-      setCurrentQuestionIndex(data.teamProgress?.questions_answered ?? 0);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Keep refs in sync
+  useEffect(() => { currentQRef.current = currentQ; }, [currentQ]);
+  useEffect(() => { selectedOptionRef.current = selectedOption; }, [selectedOption]);
+  useEffect(() => { answerLockedRef.current = answerLocked; }, [answerLocked]);
 
+  // ── Load questions ──
   useEffect(() => {
     if (!user?.id) return;
-    fetchState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetch("/api/rounds/1/state")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) { console.error(data.error); return; }
+        const shuffled = shuffleForUser(data.questions || [], user.id);
+        setQuestions(shuffled);
+
+        // Restore from localStorage
+        const ls = loadLS();
+        lsRef.current = ls;
+
+        if (ls.completed) {
+          setCompleted(true);
+          // Calculate score from saved answers
+          let s = 0;
+          shuffled.forEach((q) => {
+            if (ls.answers[q.id] === q.correct_index) s += q.points;
+          });
+          setScore(s);
+        } else {
+          setCurrentQ(ls.currentQ);
+          // Restore locked answer for current question
+          const cq = shuffled[ls.currentQ];
+          if (cq && ls.answers[cq.id] !== undefined) {
+            setSelectedOption(ls.answers[cq.id]);
+            setAnswerLocked(true);
+          }
+          // Restore or set timer start
+          if (ls.startTimes[ls.currentQ]) {
+            startTimestampRef.current = ls.startTimes[ls.currentQ];
+          } else {
+            const now = Date.now();
+            startTimestampRef.current = now;
+            ls.startTimes[ls.currentQ] = now;
+            saveLS(ls);
+          }
+        }
+      })
+      .finally(() => setLoading(false));
   }, [user?.id]);
 
-  // ── Subscribe to gameState (for locked/active/completed status) ──
+  // ── Subscribe to gameState ──
   useEffect(() => {
     const unsub = subscribeToGameState(setGameState);
     return () => unsub();
   }, []);
 
-  // ── Keep refs in sync ──
-  useEffect(() => { selectedOptionRef.current = selectedOption; }, [selectedOption]);
-  useEffect(() => { answerLockedRef.current = answerLocked; }, [answerLocked]);
-  useEffect(() => { currentQuestionIndexRef.current = currentQuestionIndex; }, [currentQuestionIndex]);
-
-  const currentQuestion = questions[currentQuestionIndex] ?? null;
-
-  // ── Restore locked answer from localStorage on load/question change ──
-  useEffect(() => {
-    if (!currentQuestion) return;
-    try {
-      const stored = JSON.parse(localStorage.getItem("pixtopia_r1_locked") || "{}");
-      if (stored[currentQuestion.id] !== undefined) {
-        setSelectedOption(stored[currentQuestion.id]);
-        setAnswerLocked(true);
-      }
-    } catch { /* ignore */ }
-  }, [currentQuestion?.id]);
-
-  // ── Set startTimestamp when question changes ──
-  useEffect(() => {
-    if (!currentQuestion || !progress?.question_start_times) return;
-    // question_start_times uses 1-indexed order
-    const startTimeStr = progress.question_start_times[currentQuestionIndex + 1];
-    if (!startTimeStr) return;
-    const ts = new Date(startTimeStr).getTime();
-    if (ts !== startTimestamp) {
-      setStartTimestamp(ts);
-      timerDoneRef.current = false;
-    }
-  }, [currentQuestionIndex, progress?.question_start_times]);
-
   // ── Timer tick ──
   useEffect(() => {
-    if (startTimestamp === null) return;
+    if (completed || !questions.length) return;
 
     const tick = () => {
-      const now = Date.now();
-      const elapsed = Math.floor((now - startTimestamp) / 1000);
+      const start = startTimestampRef.current;
+      if (!start) return;
+      const elapsed = Math.floor((Date.now() - start) / 1000);
       const remaining = Math.max(0, PER_Q_SECONDS - elapsed);
       setTimeLeft(remaining);
 
@@ -166,87 +172,85 @@ export default function Round1Page() {
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [startTimestamp]);
+  }, [currentQ, completed, questions.length]);
 
-  // ── Timer expired: submit answer and advance ──
-  const handleTimerExpired = async () => {
-    const qIndex = currentQuestionIndexRef.current;
-    const question = questions[qIndex];
+  // ── Timer expired ──
+  const handleTimerExpired = () => {
+    const qIdx = currentQRef.current;
+    const question = questions[qIdx];
     if (!question) return;
 
-    // Get the locked-in answer from localStorage or current selection
-    let selectedIdx = selectedOptionRef.current;
-    if (selectedIdx === null) {
-      try {
-        const stored = JSON.parse(localStorage.getItem("pixtopia_r1_locked") || "{}");
-        if (stored[question.id] !== undefined) {
-          selectedIdx = stored[question.id];
-        }
-      } catch { /* ignore */ }
+    const ls = lsRef.current;
+
+    // If not answered yet, record null answer
+    if (ls.answers[question.id] === undefined) {
+      ls.answers[question.id] = -1; // no answer
+      // Fire-and-forget: submit null answer to server
+      submitToServer(question.id, null, question);
     }
 
-    // Submit the answer to the server
-    try {
-      await fetch("/api/rounds/1/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId: question.id,
-          selectedIndex: selectedIdx,
-          setNextStartTime: true,
-        }),
+    // Check if last question
+    if (qIdx + 1 >= TOTAL) {
+      ls.completed = true;
+      saveLS(ls);
+      setCompleted(true);
+      // Calculate score
+      let s = 0;
+      questions.forEach((q) => {
+        if (ls.answers[q.id] === q.correct_index) s += q.points;
       });
-    } catch {
-      // ignore
-    }
-
-    // Clear this question from localStorage
-    try {
-      const stored = JSON.parse(localStorage.getItem("pixtopia_r1_locked") || "{}");
-      delete stored[question.id];
-      localStorage.setItem("pixtopia_r1_locked", JSON.stringify(stored));
-    } catch { /* ignore */ }
-
-    // Check if this was the last question
-    if (qIndex + 1 >= TOTAL_QUESTIONS) {
-      fetchState();
-      setProgress((prev) =>
-        prev ? { ...prev, is_completed: true } : null
-      );
+      setScore(s);
       return;
     }
 
     // Advance to next question
-    const freshStart = Date.now();
-    setStartTimestamp(freshStart);
+    const nextQ = qIdx + 1;
+    ls.currentQ = nextQ;
+    const now = Date.now();
+    ls.startTimes[nextQ] = now;
+    saveLS(ls);
+    lsRef.current = ls;
+
+    startTimestampRef.current = now;
     timerDoneRef.current = false;
-    setCurrentQuestionIndex((i) => i + 1);
+    setCurrentQ(nextQ);
     setSelectedOption(null);
     setAnswerLocked(false);
   };
 
-  // ── Manual answer selection (local only — submitted when timer expires) ──
+  // ── Submit to server (fire-and-forget, just for leaderboard) ──
+  const submitToServer = (questionId: string, optionIdx: number | null, q: Question) => {
+    const selectedAnswer = optionIdx !== null ? q.options?.[optionIdx] ?? null : null;
+    fetch("/api/rounds/1/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        questionId,
+        selectedIndex: optionIdx,
+        selectedAnswer,
+        setNextStartTime: true,
+      }),
+    }).catch(() => {});
+  };
+
+  // ── User selects an option ──
   const handleSelect = (optionIdx: number) => {
     if (selectedOption !== null || answerLocked) return;
-    if (timeLeft !== null && timeLeft <= 0) return;
-    const q = currentQuestion;
+    if (timeLeft <= 0) return;
+    const q = questions[currentQ];
     if (!q) return;
 
-    // Also check localStorage in case useEffect hasn't restored yet
-    try {
-      const stored = JSON.parse(localStorage.getItem("pixtopia_r1_locked") || "{}");
-      if (stored[q.id] !== undefined) return; // already answered
-    } catch { /* ignore */ }
-
+    // Lock locally
     setSelectedOption(optionIdx);
     setAnswerLocked(true);
 
-    // Save to localStorage so answer survives reload
-    try {
-      const stored = JSON.parse(localStorage.getItem("pixtopia_r1_locked") || "{}");
-      stored[q.id] = optionIdx;
-      localStorage.setItem("pixtopia_r1_locked", JSON.stringify(stored));
-    } catch { /* ignore */ }
+    // Save to localStorage
+    const ls = lsRef.current;
+    ls.answers[q.id] = optionIdx;
+    saveLS(ls);
+
+    // Fire-and-forget: update leaderboard points
+    submitToServer(q.id, optionIdx, q);
   };
 
   const formatTime = (s: number) => {
@@ -255,7 +259,7 @@ export default function Round1Page() {
     return `${m}:${sec}`;
   };
 
-  // ─── Render states ──────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   const roundStatus = gameState?.round_statuses?.["1"]?.status ?? "locked";
 
@@ -293,9 +297,10 @@ export default function Round1Page() {
     );
   }
 
-  // ── Completed state ──
-  if (progress?.is_completed) {
-    const correct = questions.filter((q) => savedAnswers[q.id] === q.correct_index).length;
+  // ── Completed ──
+  if (completed) {
+    const ls = lsRef.current;
+    const correct = questions.filter((q) => ls.answers[q.id] === q.correct_index).length;
     const wrong = questions.length - correct;
 
     return (
@@ -317,7 +322,7 @@ export default function Round1Page() {
               </div>
               <div className="w-px bg-zinc-800" />
               <div className="text-center">
-                <p className="text-3xl font-black text-amber-400">+{roundScore}</p>
+                <p className="text-3xl font-black text-amber-400">+{score}</p>
                 <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Points</p>
               </div>
             </div>
@@ -326,9 +331,8 @@ export default function Round1Page() {
           <div className="border-t border-zinc-800 pt-6 space-y-3">
             <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4">Summary</h2>
             {questions.map((q, i) => {
-              const userChoice = savedAnswers[q.id];
+              const userChoice = ls.answers[q.id];
               const isCorrect = userChoice === q.correct_index;
-
               return (
                 <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-zinc-800' : 'border-zinc-800 bg-zinc-950'}`}>
                   <p className="text-sm mb-2 leading-relaxed text-zinc-300">
@@ -338,7 +342,7 @@ export default function Round1Page() {
                     <p>
                       <span className="text-zinc-600 mr-2">Your answer:</span>
                       <span className={isCorrect ? "text-green-400" : "text-red-400"}>
-                        {userChoice !== undefined ? q.options?.[userChoice] : "No answer"}
+                        {userChoice >= 0 ? q.options?.[userChoice] : "No answer"}
                       </span>
                     </p>
                     {!isCorrect && (
@@ -367,11 +371,11 @@ export default function Round1Page() {
   }
 
   // ── Question view ──
-  const q = currentQuestion;
+  const q = questions[currentQ];
   if (!q) return null;
 
-  const timerPercent = timeLeft !== null ? (timeLeft / PER_Q_SECONDS) * 100 : 100;
-  const timerColor = (timeLeft ?? PER_Q_SECONDS) <= 20 ? "bg-red-500" : (timeLeft ?? PER_Q_SECONDS) <= 40 ? "bg-amber-400" : "bg-white";
+  const timerPercent = (timeLeft / PER_Q_SECONDS) * 100;
+  const timerColor = timeLeft <= 20 ? "bg-red-500" : timeLeft <= 40 ? "bg-amber-400" : "bg-white";
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -380,23 +384,23 @@ export default function Round1Page() {
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-sm text-zinc-500">
-              Q <span className="text-white font-bold">{currentQuestionIndex + 1}</span> / {TOTAL_QUESTIONS}
+              Q <span className="text-white font-bold">{currentQ + 1}</span> / {TOTAL}
             </span>
             <div className="hidden sm:flex gap-1">
               {questions.map((_, i) => (
                 <div
                   key={i}
                   className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    i < currentQuestionIndex ? "bg-zinc-500" :
-                    i === currentQuestionIndex ? "bg-white scale-125" : "bg-zinc-800"
+                    i < currentQ ? "bg-zinc-500" :
+                    i === currentQ ? "bg-white scale-125" : "bg-zinc-800"
                   }`}
                 />
               ))}
             </div>
           </div>
-          <div className={`flex items-center gap-1.5 font-mono font-bold text-lg ${(timeLeft ?? PER_Q_SECONDS) <= 20 ? "text-red-400 animate-pulse" : "text-white"}`}>
+          <div className={`flex items-center gap-1.5 font-mono font-bold text-lg ${timeLeft <= 20 ? "text-red-400 animate-pulse" : "text-white"}`}>
             <Clock size={16} />
-            {formatTime(timeLeft ?? PER_Q_SECONDS)}
+            {formatTime(timeLeft)}
           </div>
         </div>
         {/* Timer bar */}
@@ -414,7 +418,7 @@ export default function Round1Page() {
           <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-6">
             <div className="flex items-start gap-3">
               <span className="shrink-0 w-7 h-7 rounded-full bg-white/10 text-white text-xs font-bold flex items-center justify-center">
-                {currentQuestionIndex + 1}
+                {currentQ + 1}
               </span>
               <p className="text-white text-[15px] leading-relaxed">{q.question}</p>
             </div>

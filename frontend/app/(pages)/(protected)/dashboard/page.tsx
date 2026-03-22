@@ -406,14 +406,7 @@ export default function DashboardPage() {
         )}
 
 
-        {/* Score badge if submitted */}
-        {hasSubmitted && (
-          <div className="absolute top-4 right-4 z-20 pointer-events-none">
-            <span className="text-xs px-3 py-1.5 rounded-full font-bold bg-green-500/30 text-green-200 border border-green-400/40 backdrop-blur-sm">
-              {roundScore} GC
-            </span>
-          </div>
-        )}
+
       </div>
     );
   };

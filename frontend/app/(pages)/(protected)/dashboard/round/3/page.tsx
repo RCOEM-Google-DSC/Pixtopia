@@ -28,117 +28,120 @@ interface Question {
   hint_point: number;
 }
 
-interface TeamProgress {
-  hints_used: number;
-  hints_per_question: Record<string, number>;
-  questions_answered: number;
-  points_spent: number;
-  is_completed: boolean;
-  question_start_times?: Record<string, string>;
+const TOTAL_QUESTIONS = 10;
+const PER_Q_SECONDS = 60;
+const LS_KEY = "pixtopia_r3";
+
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+interface R3State {
+  currentQ: number;
+  answers: Record<number, number>;       // questionOrder → selectedIndex
+  startTimes: Record<number, number>;    // currentQ index → Date.now()
+  hintsPerQuestion: Record<string, number>;
+  completed: boolean;
 }
 
-const TOTAL_QUESTIONS = 10;
+function loadLS(): R3State {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { currentQ: 0, answers: {}, startTimes: {}, hintsPerQuestion: {}, completed: false };
+}
+
+function saveLS(state: R3State) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch { /* ignore */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export default function Round3Page() {
   const { team, loading: teamLoading } = useTeam();
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [progress, setProgress] = useState<TeamProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [requestingHint, setRequestingHint] = useState(false);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const selectedOptionRef = useRef<number | null>(null);
   const [answerLocked, setAnswerLocked] = useState(false);
-  const answerLockedRef = useRef(false);
-  const currentQuestionIndexRef = useRef(0);
-  // currentQuestionIndex is derived from progress.questions_answered on load,
-  // then advanced locally on correct answers without re-fetching.
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
+  const [completed, setCompleted] = useState(false);
+  const [roundScore, setRoundScore] = useState(0);
+  const [hintsPerQuestion, setHintsPerQuestion] = useState<Record<string, number>>({});
+
+  const selectedOptionRef = useRef<number | null>(null);
+  const answerLockedRef = useRef(false);
+  const currentQuestionIndexRef = useRef(0);
   const timerDoneRef = useRef(false);
   const requestingHintRef = useRef(false);
   const pausedAtRef = useRef<number | null>(null);
-  const [roundScore, setRoundScore] = useState(0);
-  const [teamPoints, setTeamPoints] = useState(0);
+  const startTimestampRef = useRef<number | null>(null);
+  const lsRef = useRef<R3State>(loadLS());
 
-  const fetchState = async () => {
-    try {
-      const res = await fetch("/api/rounds/3/state");
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("API error:", data);
-        throw new Error(data.error || "Failed to fetch state");
-      }
-      setQuestions(data.questions);
-      setProgress(data.teamProgress);
-      setRoundScore(data.roundScore ?? 0);
-      setTeamPoints(data.teamPoints ?? 0);
-      // Resume from where the team left off
-      setCurrentQuestionIndex(data.teamProgress?.questions_answered ?? 0);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Keep refs in sync
+  useEffect(() => { selectedOptionRef.current = selectedOption; }, [selectedOption]);
+  useEffect(() => { answerLockedRef.current = answerLocked; }, [answerLocked]);
+  useEffect(() => { currentQuestionIndexRef.current = currentQuestionIndex; }, [currentQuestionIndex]);
 
+  // ── Fetch questions + restore from localStorage ──
   useEffect(() => {
-    fetchState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetch("/api/rounds/3/state")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) { console.error(data.error); return; }
+        setQuestions(data.questions || []);
+        setRoundScore(data.roundScore ?? 0);
+
+        const ls = loadLS();
+        lsRef.current = ls;
+
+        if (ls.completed || data.teamProgress?.is_completed) {
+          setCompleted(true);
+          setRoundScore(data.roundScore ?? 0);
+        } else {
+          setCurrentQuestionIndex(ls.currentQ);
+          setHintsPerQuestion(ls.hintsPerQuestion);
+
+          // Restore locked answer
+          const cqOrder = (data.questions || [])[ls.currentQ]?.question_order;
+          if (cqOrder !== undefined && ls.answers[cqOrder] !== undefined) {
+            setSelectedOption(ls.answers[cqOrder]);
+            setAnswerLocked(true);
+          }
+
+          // Restore or set timer
+          if (ls.startTimes[ls.currentQ]) {
+            startTimestampRef.current = ls.startTimes[ls.currentQ];
+          } else {
+            const now = Date.now();
+            startTimestampRef.current = now;
+            ls.startTimes[ls.currentQ] = now;
+            saveLS(ls);
+          }
+        }
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const currentQuestion = questions[currentQuestionIndex] ?? null;
 
-  // How many hints have been unlocked for the current question
-  const hintsUnlockedForCurrent =
-    progress && currentQuestion
-      ? (progress.hints_per_question?.[String(currentQuestion.question_order)] ?? 0)
-      : 0;
-
+  // Hints for current question
+  const hintsUnlockedForCurrent = currentQuestion
+    ? (hintsPerQuestion[String(currentQuestion.question_order)] ?? 0)
+    : 0;
   const unlockedHints = currentQuestion?.hints.slice(0, hintsUnlockedForCurrent) ?? [];
-
-  // Deduct based on current question's hint_point
   const nextHintCost = currentQuestion?.hint_point ?? 10;
 
-  const allHintsExhausted =
-    currentQuestion ? hintsUnlockedForCurrent >= currentQuestion.hints.length : true;
-
-  // Keep refs in sync so the timer closure always reads the latest values
+  // ── Timer tick ──
   useEffect(() => {
-    selectedOptionRef.current = selectedOption;
-  }, [selectedOption]);
-  useEffect(() => {
-    answerLockedRef.current = answerLocked;
-  }, [answerLocked]);
-  useEffect(() => {
-    currentQuestionIndexRef.current = currentQuestionIndex;
-  }, [currentQuestionIndex]);
-
-  // Set startTimestamp when question changes and we have a start time from progress
-  useEffect(() => {
-    if (!currentQuestion || !progress?.question_start_times) return;
-    const startTimeStr = progress.question_start_times[currentQuestion.question_order];
-    if (!startTimeStr) return;
-    const ts = new Date(startTimeStr).getTime();
-    if (ts !== startTimestamp) {
-      setStartTimestamp(ts);
-      timerDoneRef.current = false;
-    }
-  }, [currentQuestionIndex, progress?.question_start_times]);
-
-  // Timer effect — depends only on startTimestamp, NOT on progress
-  // Pauses while a hint is being fetched (requestingHintRef)
-  useEffect(() => {
-    if (startTimestamp === null) return;
+    if (completed || !questions.length) return;
 
     const tick = () => {
-      // If hint is loading, freeze the timer
-      if (requestingHintRef.current) return;
-
-      const now = Date.now();
-      const elapsed = Math.floor((now - startTimestamp) / 1000);
-      const remaining = Math.max(0, 60 - elapsed);
+      if (requestingHintRef.current) return; // freeze during hint fetch
+      const start = startTimestampRef.current;
+      if (!start) return;
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      const remaining = Math.max(0, PER_Q_SECONDS - elapsed);
       setTimeLeft(remaining);
 
       if (remaining === 0 && !timerDoneRef.current) {
@@ -149,90 +152,82 @@ export default function Round3Page() {
 
     tick();
     const interval = setInterval(tick, 1000);
-
     return () => clearInterval(interval);
-  }, [startTimestamp]);
+  }, [currentQuestionIndex, completed, questions.length]);
 
-  // When timer expires: if answer not locked yet, auto-submit. Then advance or show summary.
-  const handleTimerExpired = async () => {
+  // ── Timer expired ──
+  const handleTimerExpired = () => {
     const alreadyLocked = answerLockedRef.current;
-    const qIndex = currentQuestionIndexRef.current;
-    const question = questions[qIndex];
+    const qIdx = currentQuestionIndexRef.current;
+    const question = questions[qIdx];
     if (!question) return;
     const questionOrder = question.question_order;
 
+    const ls = lsRef.current;
+
     if (!alreadyLocked) {
-      // Auto-submit whatever is selected (could be null)
+      // Record null answer locally
       const currentSelection = selectedOptionRef.current;
-      try {
-        await fetch("/api/rounds/3/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            questionOrder,
-            selectedIndex: currentSelection,
-          }),
-        });
-      } catch {
-        // ignore — still advance regardless
-      }
+      ls.answers[questionOrder] = currentSelection ?? -1;
+      saveLS(ls);
+      // Fire-and-forget server submit
+      fetch("/api/rounds/3/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionOrder, selectedIndex: currentSelection }),
+      }).catch(() => {});
     }
 
-    // Check if this was the last question
+    // Last question?
     if (questionOrder >= TOTAL_QUESTIONS) {
-      fetchState();
-      setProgress((prev) =>
-        prev ? { ...prev, is_completed: true } : null
-      );
+      ls.completed = true;
+      saveLS(ls);
+      setCompleted(true);
+      // Re-fetch to get final score from server
+      fetch("/api/rounds/3/state")
+        .then((r) => r.json())
+        .then((data) => { setRoundScore(data.roundScore ?? 0); setQuestions(data.questions || []); })
+        .catch(() => {});
       return;
     }
 
-    // Advance to next question — set start time to NOW so timer starts fresh at 60
-    const freshStart = Date.now();
-    setStartTimestamp(freshStart);
+    // Advance to next question
+    const nextQ = qIdx + 1;
+    ls.currentQ = nextQ;
+    const now = Date.now();
+    ls.startTimes[nextQ] = now;
+    saveLS(ls);
+    lsRef.current = ls;
+
+    startTimestampRef.current = now;
     timerDoneRef.current = false;
-    setCurrentQuestionIndex((i) => i + 1);
+    setCurrentQuestionIndex(nextQ);
     setSelectedOption(null);
     setAnswerLocked(false);
   };
 
-  // Manual submit — locks in the answer but does NOT advance to next question
-  const handleSubmit = async () => {
+  // ── Manual submit ──
+  const handleSubmit = () => {
     if (selectedOption === null || !currentQuestion || submitting || answerLocked) return;
-    if (timeLeft !== null && timeLeft <= 0) return; // Don't allow submit at 0 seconds
-    const submitForIndex = currentQuestionIndex;
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/rounds/3/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionOrder: currentQuestion.question_order,
-          selectedIndex: selectedOption,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) return;
+    if (timeLeft !== null && timeLeft <= 0) return;
 
-      // Only apply lock if we're still on the same question (timer hasn't advanced us)
-      if (currentQuestionIndexRef.current !== submitForIndex) return;
+    const questionOrder = currentQuestion.question_order;
+    setAnswerLocked(true);
 
-      setAnswerLocked(true);
+    // Save to localStorage
+    const ls = lsRef.current;
+    ls.answers[questionOrder] = selectedOption;
+    saveLS(ls);
 
-      if (!data.isRoundComplete) {
-        setProgress((prev) =>
-          prev
-            ? { ...prev, questions_answered: data.questionsAnswered }
-            : null
-        );
-      }
-    } catch {
-      // ignore
-    } finally {
-      setSubmitting(false);
-    }
+    // Fire-and-forget server submit for leaderboard
+    fetch("/api/rounds/3/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionOrder, selectedIndex: selectedOption }),
+    }).catch(() => {});
   };
 
+  // ── Get hint (still needs server since hints come from DB) ──
   const handleGetHint = async () => {
     if (!currentQuestion) return;
     setRequestingHint(true);
@@ -242,36 +237,30 @@ export default function Round3Page() {
       const res = await fetch("/api/rounds/3/hint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionOrder: currentQuestion.question_order,
-        }),
+        body: JSON.stringify({ questionOrder: currentQuestion.question_order }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        return;
-      }
+      if (!res.ok) return;
 
-      // Optimistic update — no re-fetch needed
-      setProgress((prev) => {
-        if (!prev) return null;
-        const key = String(currentQuestion.question_order);
-        return {
-          ...prev,
-          hints_used: prev.hints_used + 1,
-          points_spent: prev.points_spent + data.cost,
-          hints_per_question: {
-            ...prev.hints_per_question,
-            [key]: data.hintsUsedForQuestion,
-          },
-        };
-      });
+      const key = String(currentQuestion.question_order);
+      const newHints = { ...hintsPerQuestion, [key]: data.hintsUsedForQuestion };
+      setHintsPerQuestion(newHints);
+
+      // Save to localStorage
+      const ls = lsRef.current;
+      ls.hintsPerQuestion = newHints;
+      saveLS(ls);
     } catch {
       // ignore
     } finally {
-      // Give back the time spent waiting for the hint
-      if (pausedAtRef.current && startTimestamp) {
+      // Give back pause time
+      if (pausedAtRef.current && startTimestampRef.current) {
         const pausedMs = Date.now() - pausedAtRef.current;
-        setStartTimestamp((prev) => (prev ? prev + pausedMs : prev));
+        startTimestampRef.current = startTimestampRef.current + pausedMs;
+        // Also update localStorage
+        const ls = lsRef.current;
+        ls.startTimes[currentQuestionIndex] = startTimestampRef.current;
+        saveLS(ls);
       }
       pausedAtRef.current = null;
       requestingHintRef.current = false;
@@ -279,7 +268,7 @@ export default function Round3Page() {
     }
   };
 
-  // ── Loading ──────────────────────────────────────────────────────────────────
+  // ── Loading ──
   if (loading || teamLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col">
@@ -295,15 +284,14 @@ export default function Round3Page() {
     );
   }
 
-  // ── Completed ────────────────────────────────────────────────────────────────
-  if (progress?.is_completed) {
+  // ── Completed ──
+  if (completed) {
     const correctCount = questions.filter(q => (q as any).is_correct).length;
     const wrongCount = questions.length - correctCount;
 
-    // Calculate hints stats
-    const hintsPerQ = progress.hints_per_question || {};
-    const totalHintsUsed = Object.values(hintsPerQ).reduce((sum, count) => sum + count, 0);
-    const totalHintCost = Object.entries(hintsPerQ).reduce((sum, [qOrder, count]) => {
+    const hpq = hintsPerQuestion;
+    const totalHintsUsed = Object.values(hpq).reduce((sum, count) => sum + count, 0);
+    const totalHintCost = Object.entries(hpq).reduce((sum, [qOrder, count]) => {
       const question = questions.find(q => q.question_order === Number(qOrder));
       return sum + (question?.hint_point ?? 10) * count;
     }, 0);
@@ -338,7 +326,6 @@ export default function Round3Page() {
             </div>
           </div>
 
-          {/* Hints summary */}
           {totalHintsUsed > 0 && (
             <div className="flex justify-center gap-8 mt-2 pt-4 border-t border-zinc-800/50">
               <div className="text-center">
@@ -364,14 +351,14 @@ export default function Round3Page() {
     );
   }
 
-  // ── Question view ────────────────────────────────────────────────────────────
+  // ── Question view ──
   return (
     <div className="h-screen bg-black flex flex-col overflow-hidden">
       <main className="flex-1 flex flex-col justify-between px-4 py-3 max-w-5xl mx-auto w-full min-h-0">
         {currentQuestion && (
           <div key={currentQuestionIndex} className="flex-1 flex flex-col justify-between min-h-0 animate-[fadeIn_0.3s_ease-in]">
             <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
-            {/* Header: badge + question + timer */}
+            {/* Header */}
             <div className="text-center space-y-2 shrink-0">
               <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
                 Question {currentQuestionIndex + 1} of {TOTAL_QUESTIONS}
@@ -402,7 +389,7 @@ export default function Round3Page() {
               </div>
             </div>
 
-            {/* Hints (compact) */}
+            {/* Hints */}
             {unlockedHints.length > 0 && (
               <div className="mt-2 shrink-0">
                 {unlockedHints.map((hint, i) => (
@@ -416,7 +403,7 @@ export default function Round3Page() {
               </div>
             )}
 
-            {/* Image grid — fills remaining space */}
+            {/* Image grid */}
             <div className="grid grid-cols-2 gap-3 mt-3 flex-1 min-h-0 max-w-3xl mx-auto w-full max-h-[55vh]">
               {currentQuestion.image_urls.map((url, index) => (
                 <Card
@@ -514,5 +501,3 @@ export default function Round3Page() {
     </div>
   );
 }
-
-
