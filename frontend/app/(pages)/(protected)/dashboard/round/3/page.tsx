@@ -98,6 +98,13 @@ export default function Round3Page() {
         if (ls.completed || data.teamProgress?.is_completed) {
           setCompleted(true);
           setRoundScore(data.roundScore ?? 0);
+
+          // If server has is_correct data, we're good. If not, retry.
+          const hasCorrectData = (data.questions || []).some((q: any) => q.is_correct !== undefined);
+          if (!hasCorrectData) {
+            // Server hasn't processed all answers yet — retry
+            setTimeout(() => fetchFinalResults(), 1500);
+          }
         } else {
           setCurrentQuestionIndex(ls.currentQ);
           setHintsPerQuestion(ls.hintsPerQuestion);
@@ -155,8 +162,24 @@ export default function Round3Page() {
     return () => clearInterval(interval);
   }, [currentQuestionIndex, completed, questions.length]);
 
+  // ── Helper: fetch final results with retry ──
+  const fetchFinalResults = async (retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 1000)); // wait 1s between retries
+      try {
+        const res = await fetch("/api/rounds/3/state");
+        const data = await res.json();
+        setRoundScore(data.roundScore ?? 0);
+        setQuestions(data.questions || []);
+        // Check if server has is_correct data
+        const hasCorrectData = (data.questions || []).some((q: any) => q.is_correct !== undefined);
+        if (hasCorrectData) return;
+      } catch { /* retry */ }
+    }
+  };
+
   // ── Timer expired ──
-  const handleTimerExpired = () => {
+  const handleTimerExpired = async () => {
     const alreadyLocked = answerLockedRef.current;
     const qIdx = currentQuestionIndexRef.current;
     const question = questions[qIdx];
@@ -165,29 +188,30 @@ export default function Round3Page() {
 
     const ls = lsRef.current;
 
+    // Last question? await the submit so server has all answers
+    const isLastQ = questionOrder >= TOTAL_QUESTIONS;
+
     if (!alreadyLocked) {
-      // Record null answer locally
       const currentSelection = selectedOptionRef.current;
       ls.answers[questionOrder] = currentSelection ?? -1;
       saveLS(ls);
-      // Fire-and-forget server submit
-      fetch("/api/rounds/3/submit", {
+
+      const submitPromise = fetch("/api/rounds/3/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionOrder, selectedIndex: currentSelection }),
       }).catch(() => {});
+
+      // For last question, wait for submit to finish
+      if (isLastQ) await submitPromise;
     }
 
-    // Last question?
-    if (questionOrder >= TOTAL_QUESTIONS) {
+    if (isLastQ) {
       ls.completed = true;
       saveLS(ls);
       setCompleted(true);
-      // Re-fetch to get final score from server
-      fetch("/api/rounds/3/state")
-        .then((r) => r.json())
-        .then((data) => { setRoundScore(data.roundScore ?? 0); setQuestions(data.questions || []); })
-        .catch(() => {});
+      // Fetch final results (with retry to ensure server has processed)
+      await fetchFinalResults();
       return;
     }
 
