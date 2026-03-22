@@ -10,7 +10,7 @@
  * Usage:
  *   node scripts/seedRound4.js
  *
- * Required env (frontend/.env):
+ * Required env (frontend/.env.local or frontend/.env):
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
@@ -19,13 +19,28 @@
  */
 
 const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+const fs = require("fs");
+const dotenv = require("dotenv");
+
+const ENV_CANDIDATES = [
+  path.resolve(__dirname, "../.env.local"),
+  path.resolve(__dirname, "../.env"),
+  path.resolve(process.cwd(), ".env.local"),
+  path.resolve(process.cwd(), ".env"),
+];
+
+for (const envPath of ENV_CANDIDATES) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: false });
+  }
+}
+
 const { createClient } = require("@supabase/supabase-js");
 const cloudinary = require("cloudinary").v2;
 const sharp = require("sharp");
-const fs = require("fs");
 const os = require("os");
-const round4Answers = require("./round4.json");
+const util = require("util");
+const round4Data = require("./round4.json");
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB — Cloudinary free plan limit
 
@@ -63,9 +78,53 @@ cloudinary.config({
 const CLOUDINARY_FOLDER = "round4";
 const IMAGES_DIR = path.join(__dirname, "../public/Round4");
 
-// Placeholder service used when local images are absent
-const PLACEHOLDER = (w, h, label) =>
-  `https://placehold.co/${w}x${h}/1e1e2e/6366f1?text=${encodeURIComponent(label)}`;
+function formatCloudinaryError(err) {
+  const message =
+    err?.error?.message ||
+    err?.message ||
+    err?.response?.data?.error?.message ||
+    err?.response?.data?.message ||
+    "Unknown Cloudinary error";
+
+  return {
+    message,
+    name: err?.name,
+    http_code: err?.http_code || err?.error?.http_code || err?.response?.status,
+    code: err?.code,
+    raw: util.inspect(err, { depth: 6, colors: false, breakLength: 140 }),
+  };
+}
+
+function isCloudinaryTimeoutError(err) {
+  const httpCode = err?.http_code || err?.error?.http_code || err?.response?.status;
+  const msg = String(
+    err?.error?.message || err?.message || err?.response?.data?.error?.message || "",
+  ).toLowerCase();
+  return httpCode === 499 || msg.includes("timeout") || msg.includes("timed out");
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function detectQuestionOrderColumn() {
+  for (const column of ["order", "question_order"]) {
+    const { error } = await supabase
+      .from("questions")
+      .select(`id, ${column}`)
+      .limit(1);
+    if (!error) return column;
+  }
+
+  throw new Error(
+    "Could not detect question order column in questions table (expected 'order' or 'question_order').",
+  );
+}
+
+function toPublicRound4Path(filePath) {
+  if (!filePath) return null;
+  return `/Round4/${path.basename(filePath)}`;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Puzzle data
@@ -79,14 +138,24 @@ function generateImageLabels(answer) {
 // Build puzzles array from round4.json (questions 1-7)
 const round4Puzzles = [];
 for (let order = 1; order <= 7; order++) {
-  const answer = round4Answers[String(order)];
+  const answer = round4Data[String(order)];
+  if (typeof answer !== "string" || !answer.trim()) {
+    console.warn(`⚠️  Missing/invalid answer for order ${order} in round4.json; skipping.`);
+    continue;
+  }
+
   const image_labels = generateImageLabels(answer);
+
+  const localImg1 = `/Round4/${order}-1.png`;
+  const localImg2 = `/Round4/${order}-2.png`;
+
   round4Puzzles.push({
     order,
     image_labels,
     answer,
     points: 100,
-    image_urls: [PLACEHOLDER(400, 300, image_labels[0]), PLACEHOLDER(400, 300, image_labels[1])],
+    // Frontend can render these directly if Cloudinary upload is skipped/fails.
+    image_urls: [localImg1, localImg2],
   });
 }
 
@@ -101,7 +170,11 @@ async function ensureCloudinaryFolder() {
     if (err?.error?.message?.includes("already exists")) {
       console.log(`📁 Cloudinary folder '${CLOUDINARY_FOLDER}' already exists.`);
     } else {
-      console.log(`📁 Cloudinary folder '${CLOUDINARY_FOLDER}' created or already exists.`);
+      const formatted = formatCloudinaryError(err);
+      console.error(`❌ Cloudinary folder check failed for '${CLOUDINARY_FOLDER}': ${formatted.message}`);
+      console.error(`   name=${formatted.name || "n/a"} http_code=${formatted.http_code || "n/a"} code=${formatted.code || "n/a"}`);
+      console.error(`   raw=${formatted.raw}`);
+      throw err;
     }
   }
 }
@@ -160,15 +233,41 @@ async function uploadImage(filePath, publicId) {
   try {
     uploadPath = await compressIfNeeded(filePath, filename);
 
-    const result = await cloudinary.uploader.upload(uploadPath, {
-      public_id: publicId,
-      overwrite: true,
-      resource_type: "image",
-    });
-    console.log(`   ✅  Uploaded: ${result.secure_url}`);
-    return result.secure_url;
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const result = await cloudinary.uploader.upload(uploadPath, {
+          folder: CLOUDINARY_FOLDER,
+          public_id: path.basename(publicId),
+          overwrite: true,
+          resource_type: "auto",
+          timeout: 180000,
+        });
+        console.log(`   ✅  Uploaded: ${result.secure_url}`);
+        return result.secure_url;
+      } catch (err) {
+        const formatted = formatCloudinaryError(err);
+        const isTimeout = isCloudinaryTimeoutError(err);
+        console.error(`   ❌  Upload failed for ${filename} (attempt ${attempt}/${maxAttempts}): ${formatted.message}`);
+        console.error(`      name=${formatted.name || "n/a"} http_code=${formatted.http_code || "n/a"} code=${formatted.code || "n/a"}`);
+        console.error(`      raw=${formatted.raw}`);
+
+        if (!isTimeout || attempt === maxAttempts) {
+          return null;
+        }
+
+        const waitMs = 1000 * Math.pow(2, attempt - 1);
+        console.log(`      ↻  Timeout detected, retrying in ${waitMs}ms...`);
+        await sleep(waitMs);
+      }
+    }
+
+    return null;
   } catch (err) {
-    console.error(`   ❌  Upload failed for ${filename}:`, err.message);
+    const formatted = formatCloudinaryError(err);
+    console.error(`   ❌  Upload preparation failed for ${filename}: ${formatted.message}`);
+    console.error(`      name=${formatted.name || "n/a"} http_code=${formatted.http_code || "n/a"} code=${formatted.code || "n/a"}`);
+    console.error(`      raw=${formatted.raw}`);
     return null;
   } finally {
     if (uploadPath !== filePath && fs.existsSync(uploadPath)) {
@@ -184,19 +283,42 @@ async function seed() {
   console.log("🚀  Seeding Round 4 (Visual Puzzle) questions…");
   console.log("☁️   Using Cloudinary for image storage\n");
 
+  const orderColumn = await detectQuestionOrderColumn();
+  console.log(`🧭  Using order column: ${orderColumn}`);
+
   await ensureCloudinaryFolder();
 
-  // Wipe all existing round-4 rows first
-  console.log("🗑️   Clearing all existing round-4 questions…");
-  const { data: allExisting } = await supabase
+  // Clear only Part A rows so this script does not delete Part B (orders 8-10)
+  const partAOrders = round4Puzzles.map((p) => p.order);
+  console.log(`🗑️   Clearing existing round-4 Part A rows (orders: ${partAOrders.join(", ")})…`);
+  const { data: existingRows, error: fetchErr } = await supabase
     .from("questions")
-    .select("id")
+    .select(`id, ${orderColumn}`)
     .eq("round_id", "4");
-  if (allExisting && allExisting.length > 0) {
-    for (const r of allExisting) {
-      await supabase.from("questions").delete().eq("id", r.id);
+
+  if (fetchErr) {
+    console.error("❌  Failed to fetch existing Part A rows:", fetchErr.message);
+    return;
+  }
+
+  const idsToDelete = (existingRows || [])
+    .filter((row) => partAOrders.includes(Number(row[orderColumn])))
+    .map((row) => row.id);
+
+  if (idsToDelete.length > 0) {
+    for (const id of idsToDelete) {
+      const { error: delErr } = await supabase
+        .from("questions")
+        .delete()
+        .eq("id", id);
+      if (delErr) {
+        console.error("❌  Failed to delete existing Part A row:", delErr.message);
+        return;
+      }
     }
-    console.log(`   Deleted ${allExisting.length} old row(s)\n`);
+    console.log(`   Cleared ${idsToDelete.length} old Part A row(s)\n`);
+  } else {
+    console.log("   No existing Part A rows to clear\n");
   }
 
   for (const puzzle of round4Puzzles) {
@@ -209,6 +331,13 @@ async function seed() {
     // Upload each local image (2 per puzzle) to Cloudinary
     for (let i = 0; i < 2; i++) {
       const localFile = findLocalImage(puzzle.order, i + 1);
+
+      // Keep a frontend-safe local path as fallback even if upload fails.
+      const localPublicPath = toPublicRound4Path(localFile);
+      if (localPublicPath) {
+        finalUrls[i] = localPublicPath;
+      }
+
       const publicId = `${CLOUDINARY_FOLDER}/q${puzzle.order}_img${i + 1}`;
       const url = await uploadImage(localFile, publicId);
       if (url) {
@@ -219,9 +348,11 @@ async function seed() {
     // Insert fresh row
     const row = {
       round_id: "4",
-      order: puzzle.order,
+      [orderColumn]: puzzle.order,
       image_urls: finalUrls,
+      letters: puzzle.image_labels,
       answer: puzzle.answer,
+      correct_index: 0,
       points: puzzle.points,
     };
 

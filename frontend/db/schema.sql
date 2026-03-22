@@ -15,12 +15,12 @@ CREATE TABLE public.questions (
   options ARRAY,
   correct_index integer NOT NULL DEFAULT 0,
   image_urls ARRAY,
-  video_url text,
   letters ARRAY,
   answer text,
+  points integer NOT NULL DEFAULT 0,
+  video_url text,
   hint text,
   hint_cost integer NOT NULL DEFAULT 10,
-  points integer NOT NULL DEFAULT 0,
   CONSTRAINT questions_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.round_3_questions (
@@ -39,6 +39,8 @@ CREATE TABLE public.submissions (
   round1 jsonb,
   round3 jsonb,
   round4 jsonb,
+  round5 jsonb,
+  round2 jsonb,
   CONSTRAINT submissions_pkey PRIMARY KEY (team_id),
   CONSTRAINT submissions_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id)
 );
