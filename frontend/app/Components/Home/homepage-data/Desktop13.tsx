@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import clsx from "clsx";
+import Link from "next/link";
 import svgPaths from "./svg-4gscvfim9a";
 import { imgGroup } from "./svg-b4aqe";
 
@@ -1555,10 +1556,10 @@ export default function Desktop() {
           BLUFF AND BATTLE IT OUT TO GRAB THE GOODIES
         </span>
       </p>
-      <p className="-translate-x-1/2 absolute font-['Inter:Light',sans-serif] font-light h-[22px] leading-[normal] left-[345px] not-italic text-[18px] text-center text-white top-[5119px] tracking-[8.28px] w-[232px]">
+      <p className="-translate-x-1/2 absolute font-['Inter:Light',sans-serif] font-light h-[22px] leading-[normal] left-[345px] not-italic text-[18px] text-center text-white top-[5119px] tracking-[8.28px] w-[232px] pointer-events-none z-30">
         LEADERBOARD
       </p>
-      <div className="absolute flex items-center justify-center border border-solid border-white h-[62px] left-[205px] rounded-[31px] top-[5099px] w-[280px]" />
+      <Link href="/leaderboard" className="absolute flex items-center justify-center border border-solid border-white h-[62px] left-[205px] rounded-[31px] top-[5099px] w-[280px] z-20 cursor-pointer hover:bg-white/10 transition-colors" />
       <p className="-translate-x-1/2 absolute font-['Inter:Light',sans-serif] font-light leading-[normal] left-[292.5px] not-italic text-[18px] text-center text-white top-[5043px] tracking-[8.28px] whitespace-nowrap">
         live now
       </p>

@@ -18,6 +18,7 @@ import {
 } from "@radix-ui/react-icons";
 import { subscribeToLeaderboard } from "@/lib/database";
 import SiteNavbar from "@/app/Components/Navigation/DashboardNavbar";
+import Footer from "@/app/Components/Footer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,68 +130,6 @@ function LBTable({ data }: { data: Row[] }) {
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── Footer (same as LeaderboardX Footer) ────────────────────────────────────
-
-function Footer() {
-  return (
-    <div className="footer overflow-hidden mt-auto">
-      <footer
-        id="footer"
-        className="relative flex items-center justify-between py-10 max-md:flex-col md:h-80"
-      >
-        {/* Left — GDG branding */}
-        <div className="flex w-[30vw] flex-col items-center justify-center font-sans max-md:w-fit md:translate-x-16">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/gdg.svg" alt="GDG Logo" className="h-10 w-auto" />
-          <p className="pt-4 text-center text-2xl text-slate-100 max-md:text-xl">
-            Google Developer Groups
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-md text-blue-400">On Campus</span>
-            <span className="text-zinc-400">•</span>
-            <span className="text-md text-slate-300">Ramdeobaba University</span>
-          </div>
-        </div>
-
-        {/* Right — Contact + social */}
-        <div className="flex w-[50vw] flex-col items-center justify-center gap-4 max-md:w-[95vw] max-md:py-8 md:items-start">
-          <div className="flex flex-col gap-8">
-            <div className="flex items-center">
-              <SewingPinIcon className="mx-12 scale-[2] text-slate-100" />
-              <div className="text-md w-2/3 text-slate-100 max-md:text-sm">
-                Ramdeobaba University, Ramdeo Tekdi, Gittikhadan, Katol Road, Nagpur - 440013
-              </div>
-            </div>
-            <div className="flex items-center py-4">
-              <EnvelopeClosedIcon className="ml-12 mr-6 scale-[1.8] text-slate-100" />
-              <a
-                href="mailto:contact@gdgrbu.dev"
-                className="text-md mx-6 text-left text-slate-100 underline underline-offset-2 max-md:text-sm"
-              >
-                contact@gdgrbu.tech
-              </a>
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-12 py-4 md:ml-10">
-            <div className="text-md text-slate-100">Follow Us</div>
-            <div className="flex gap-8">
-              <a href="https://www.instagram.com/gdg_rbu/" target="_blank" rel="noreferrer">
-                <InstagramLogoIcon className="scale-150 cursor-pointer text-slate-100 transition-all hover:scale-[1.8]" />
-              </a>
-              <a href="https://x.com/gdsc_rcoem" target="_blank" rel="noreferrer">
-                <TwitterLogoIcon className="scale-150 cursor-pointer text-slate-100 transition-all hover:scale-[1.8]" />
-              </a>
-              <a href="https://in.linkedin.com/company/gdsc-rcoem" target="_blank" rel="noreferrer">
-                <LinkedInLogoIcon className="scale-150 cursor-pointer text-slate-100 transition-all hover:scale-[1.8]" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
