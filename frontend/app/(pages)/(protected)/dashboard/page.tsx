@@ -390,21 +390,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ─── Status indicator ─── */}
-        {status !== "locked" && (
-          <div
-            className="absolute bottom-4 right-4 z-20 pointer-events-none"
-            style={{ opacity: isExpanded ? 1 : 0.8, transition: 'opacity 0.3s' }}
-          >
-            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold backdrop-blur-sm
-              ${status === "active" ? "bg-green-500/30 text-green-200 border border-green-400/40" : ""}
-              ${status === "completed" ? "bg-white/20 text-white/70 border border-white/30" : ""}
-            `}>
-              {status === "active" && "LIVE"}
-              {status === "completed" && "ENDED"}
-            </span>
-          </div>
-        )}
+
 
         {/* Score badge if submitted */}
         {hasSubmitted && (
