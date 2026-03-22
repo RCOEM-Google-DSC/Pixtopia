@@ -3,7 +3,7 @@
 /* ──────────────────────────────────────────────────────────
  *  Change this URL to redirect participants to the game
  * ────────────────────────────────────────────────────────── */
-const ROUND_5_URL = "https://www.gdgrbu.tech";
+const ROUND_5_URL = "https://game.gdgrbu.tech";
 
 import { useEffect } from "react";
 
