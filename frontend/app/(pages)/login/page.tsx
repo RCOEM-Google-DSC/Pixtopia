@@ -283,6 +283,9 @@ export default function LoginPage() {
   useEffect(() => {
     if (!modelLoaded) return;
 
+    // Pre-fetch the dashboard page so it's ready when the user logs in
+    router.prefetch("/dashboard");
+
     const t1 = setTimeout(() => setAnimState("zoomin"), 400);
     const t2 = setTimeout(() => setAnimState("drift"), 2200);
     const t3 = setTimeout(() => setAnimState("exit"), 4000);
@@ -316,18 +319,13 @@ export default function LoginPage() {
         return;
       }
 
+      // The server route already set session cookies via @supabase/ssr.
+      // Just refresh the client auth state from the cookie — no need for
+      // a second signInWithPassword() round-trip to Supabase.
       const supabase = createClient();
-      const { error: clientErr } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (clientErr) {
-        setError(clientErr.message);
-        setLoading(false);
-        return;
-      }
+      await supabase.auth.getUser();
 
-      router.push("/dashboard");
+      router.replace("/dashboard");
       // Intentionally not setting loading to false so the UI stays in loading state during transition
     } catch {
       setError("Failed to connect. Please try again.");
