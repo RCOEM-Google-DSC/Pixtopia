@@ -262,6 +262,7 @@ export default function LoginPage() {
   );
   const carRef = useRef<THREE.Group>(null);
   const [modelLoaded, setModelLoaded] = useState(false);
+  const [supabaseReady, setSupabaseReady] = useState(false);
 
   // Auth state
   const [email, setEmail] = useState("");
@@ -279,18 +280,21 @@ export default function LoginPage() {
     setModelLoaded(true);
   }, []);
 
-  // Animation sequence timers — only start AFTER the 3D model has loaded
+  // STEP 1: Warm up Supabase connection BEFORE loading the 11 MB 3D model.
+  // This ensures the TLS handshake + HTTP/2 connection to Supabase is fully
+  // established before the model download saturates the bandwidth.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(() => {
+      setSupabaseReady(true);
+    });
+    // Also prefetch the dashboard page
+    router.prefetch("/dashboard");
+  }, []);
+
+  // STEP 2: Animation sequence — only start AFTER the 3D model has loaded
   useEffect(() => {
     if (!modelLoaded) return;
-
-    // Pre-fetch the dashboard page so it's ready when the user logs in
-    router.prefetch("/dashboard");
-
-    // Eagerly initialize the Supabase client & warm up the auth connection
-    // while the car animation plays (~5s). This way, by the time the user
-    // sees the login form, the TLS handshake is done and auth calls are instant.
-    const supabase = createClient();
-    supabase.auth.getSession(); // fire-and-forget — just warms the connection
 
     const t1 = setTimeout(() => setAnimState("zoomin"), 400);
     const t2 = setTimeout(() => setAnimState("drift"), 2200);
@@ -359,36 +363,38 @@ export default function LoginPage() {
       />
       <SpeedLines />
 
-      {/* 3D Canvas — fades in once model is loaded to avoid teleportation pop */}
-      <div
-        className="absolute inset-0 z-10 pointer-events-none"
-        style={{
-          opacity: modelLoaded ? 1 : 0,
-          transition: "opacity 0.8s ease-in",
-        }}
-      >
-        <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 1.5]} performance={{ min: 0.5 }}>
-          <ambientLight intensity={1.5} />
-          <directionalLight position={[10, 10, 10]} intensity={2} />
-          <directionalLight position={[-10, 5, -10]} intensity={1} color="#e11d48" />
+      {/* 3D Canvas — only starts loading AFTER Supabase connection is warm */}
+      {supabaseReady && (
+        <div
+          className="absolute inset-0 z-10 pointer-events-none"
+          style={{
+            opacity: modelLoaded ? 1 : 0,
+            transition: "opacity 0.8s ease-in",
+          }}
+        >
+          <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={[1, 1.5]} performance={{ min: 0.5 }}>
+            <ambientLight intensity={1.5} />
+            <directionalLight position={[10, 10, 10]} intensity={2} />
+            <directionalLight position={[-10, 5, -10]} intensity={1} color="#e11d48" />
 
-          <React.Suspense fallback={null}>
-            <CameraRig isDrifting={isDrifting} isExiting={isExiting} />
-            <McQueen isDrifting={isDrifting} isReady={isReady} isExiting={isExiting} carRef={carRef} onModelLoaded={handleModelLoaded} />
-            <Smoke isDrifting={isDrifting} carRef={carRef} />
-            <Environment preset="city" />
-            <ContactShadows
-              position={[0, -1, 0]}
-              opacity={0.4}
-              scale={20}
-              blur={2.5}
-              far={10}
-              resolution={256}
-              frames={1}
-            />
-          </React.Suspense>
-        </Canvas>
-      </div>
+            <React.Suspense fallback={null}>
+              <CameraRig isDrifting={isDrifting} isExiting={isExiting} />
+              <McQueen isDrifting={isDrifting} isReady={isReady} isExiting={isExiting} carRef={carRef} onModelLoaded={handleModelLoaded} />
+              <Smoke isDrifting={isDrifting} carRef={carRef} />
+              <Environment preset="city" />
+              <ContactShadows
+                position={[0, -1, 0]}
+                opacity={0.4}
+                scale={20}
+                blur={2.5}
+                far={10}
+                resolution={256}
+                frames={1}
+              />
+            </React.Suspense>
+          </Canvas>
+        </div>
+      )}
 
       {/* Login Overlay UI */}
       <AnimatePresence>
