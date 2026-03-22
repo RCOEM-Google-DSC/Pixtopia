@@ -1,73 +1,116 @@
-require('dotenv').config({ path: '../.env' });
-const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+const { createClient } = require('@supabase/supabase-js');
+const cloudinary = require('cloudinary').v2;
+const sharp = require('sharp');
+const fs = require('fs');
+const os = require('os');
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB — Cloudinary free plan limit
+
+// ─── Supabase (still used for DB operations) ─────────────────────────────────
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error('❌ Missing environment variables.');
-  // In dev/test environments we might not have these, so we'll just log and continue
-  if (process.env.NODE_ENV !== 'test') {
-      process.exit(1);
-  }
+  console.error('❌ Missing Supabase environment variables.');
+  if (process.env.NODE_ENV !== 'test') process.exit(1);
 }
 
 const supabase = createClient(SUPABASE_URL || 'http://localhost:54321', SERVICE_ROLE_KEY || 'mock', {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const BUCKET_NAME = 'round3';
+// ─── Cloudinary configuration ─────────────────────────────────────────────────
+const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const API_KEY = process.env.CLOUDINARY_API_KEY;
+const API_SECRET = process.env.CLOUDINARY_API_SECRET;
+
+if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
+  console.error('❌ Missing Cloudinary environment variables (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET).');
+  if (process.env.NODE_ENV !== 'test') process.exit(1);
+}
+
+cloudinary.config({
+  cloud_name: CLOUD_NAME,
+  api_key: API_KEY,
+  api_secret: API_SECRET,
+});
+
+const CLOUDINARY_FOLDER = 'round3';
 const ROUND3_DIR = path.join(__dirname, '../public/round3');
 
-async function ensureBucket() {
-  const { data: buckets, error } = await supabase.storage.listBuckets();
-  if (error) {
-    console.error('❌ Error listing buckets:', error.message);
-    return;
-  }
-  if (!buckets?.find(b => b.name === BUCKET_NAME)) {
-    console.log(`🪣 Creating public bucket '${BUCKET_NAME}'...`);
-    await supabase.storage.createBucket(BUCKET_NAME, { public: true });
+// ─── Ensure the Cloudinary folder exists ──────────────────────────────────────
+async function ensureCloudinaryFolder() {
+  try {
+    await cloudinary.api.create_folder(CLOUDINARY_FOLDER);
+    console.log(`📁 Cloudinary folder '${CLOUDINARY_FOLDER}' ready.`);
+  } catch (err) {
+    if (err?.error?.message?.includes('already exists')) {
+      console.log(`📁 Cloudinary folder '${CLOUDINARY_FOLDER}' already exists.`);
+    } else {
+      console.log(`📁 Cloudinary folder '${CLOUDINARY_FOLDER}' created or already exists.`);
+    }
   }
 }
 
+// ─── Compress image if it exceeds the size limit ──────────────────────────────
+async function compressIfNeeded(filePath, fileName) {
+  const stats = fs.statSync(filePath);
+  if (stats.size <= MAX_FILE_SIZE) {
+    return filePath; // No compression needed
+  }
+
+  console.log(`   🗜️  Compressing ${fileName} (${(stats.size / 1024 / 1024).toFixed(2)} MB > 10 MB limit)...`);
+
+  const tempPath = path.join(os.tmpdir(), `compressed_${Date.now()}_${path.parse(fileName).name}.jpg`);
+
+  await sharp(filePath)
+    .resize({ width: 1920, withoutEnlargement: true }) // cap width at 1920px
+    .jpeg({ quality: 85 })
+    .toFile(tempPath);
+
+  const newStats = fs.statSync(tempPath);
+  console.log(`   🗜️  Compressed to ${(newStats.size / 1024 / 1024).toFixed(2)} MB`);
+  return tempPath;
+}
+
+// ─── Upload image to Cloudinary ───────────────────────────────────────────────
 async function uploadImageForOption(questionOrder, optionIndex) {
   if (!fs.existsSync(ROUND3_DIR)) return null;
-  
+
   const files = fs.readdirSync(ROUND3_DIR);
-  // Matches "1.1.png", "1.1.jpg", etc.
   const prefix = `${questionOrder}.${optionIndex}.`;
   const file = files.find(f => f.startsWith(prefix));
-  
+
   if (!file) return null;
 
   const filePath = path.join(ROUND3_DIR, file);
-  const fileBuffer = fs.readFileSync(filePath);
-  
-  // Create a unique filename so it updates properly and doesn't collide
-  const ext = path.extname(file).toLowerCase();
-  const fileName = `q${questionOrder}_opt${optionIndex}_${Date.now()}${ext}`;
-  
-  let contentType = 'image/png';
-  if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-  else if (ext === '.webp') contentType = 'image/webp';
-  else if (ext === '.gif') contentType = 'image/gif';
+  const publicId = `${CLOUDINARY_FOLDER}/q${questionOrder}_opt${optionIndex}`;
 
-  console.log(`   📤 Uploading ${file} to Supabase bucket...`);
-  const { data, error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, fileBuffer, {
-    contentType,
-    upsert: true
-  });
-  
-  if (error) {
-    console.error(`   ❌ Upload failed for ${file}:`, error.message);
+  console.log(`   📤 Uploading ${file} to Cloudinary...`);
+
+  let uploadPath = filePath;
+  try {
+    // Compress if file exceeds Cloudinary's 10MB limit
+    uploadPath = await compressIfNeeded(filePath, file);
+
+    const result = await cloudinary.uploader.upload(uploadPath, {
+      public_id: publicId,
+      overwrite: true,
+      resource_type: 'image',
+    });
+    console.log(`   ✅ Uploaded: ${result.secure_url}`);
+    return result.secure_url;
+  } catch (err) {
+    console.error(`   ❌ Upload failed for ${file}:`, err.message);
     return null;
+  } finally {
+    // Clean up temp file if we created one
+    if (uploadPath !== filePath && fs.existsSync(uploadPath)) {
+      fs.unlinkSync(uploadPath);
+    }
   }
-  
-  const { data: publicUrlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-  return publicUrlData.publicUrl;
 }
 
 const round3Questions = [
@@ -81,7 +124,7 @@ const round3Questions = [
   },
   {
     question_order: 2,
-    question: "I live in a dentist’s aquarium and try to escape often.",
+    question: "I live in a dentist's aquarium and try to escape often.",
     image_urls: ["", "", "", ""],
     correct_index: 3,
     hints: ["I am the leader of the tank gang."],
@@ -108,7 +151,7 @@ const round3Questions = [
     question: "I learned cooking by watching a famous chef on TV.",
     image_urls: ["", "", "", ""],
     correct_index: 0,
-    hints: ["I hide under someone’s hat to guide them."],
+    hints: ["I hide under someone's hat to guide them."],
     points: 100
   },
     {
@@ -132,7 +175,7 @@ const round3Questions = [
     question: "I once felt abandoned and was afraid of being left behind again.",
     image_urls: ["", "", "", ""],
     correct_index: 3,
-    hints: ["A song about “when somebody loved me” tells my story."],
+    hints: ["A song about 'when somebody loved me' tells my story."],
     points: 100
   },
   {
@@ -155,16 +198,17 @@ const round3Questions = [
 
 async function seed() {
   console.log('🚀 Seeding Round 3 questions...');
-  
-  await ensureBucket();
-  
+  console.log('☁️  Using Cloudinary for image storage\n');
+
+  await ensureCloudinaryFolder();
+
   for (const q of round3Questions) {
     console.log(`\nProcessing Question ${q.question_order}...`);
-    
+
     // Copy existing URLs so we don't lose them if local files don't exist
     const finalImageUrls = [...q.image_urls];
-    
-    // Check local public/round3 directory for updated images 1.1 to 1.4, etc.
+
+    // Upload images from public/round3 to Cloudinary
     for (let i = 0; i < 4; i++) {
       const optionIndex = i + 1; // 1 to 4
       const uploadedUrl = await uploadImageForOption(q.question_order, optionIndex);
@@ -172,9 +216,9 @@ async function seed() {
         finalImageUrls[i] = uploadedUrl;
       }
     }
-    
+
     const payload = { ...q, image_urls: finalImageUrls };
-    
+
     const { error } = await supabase.from('round_3_questions').upsert(payload, { onConflict: 'question_order' });
     if (error) {
       console.error(`❌ Error seeding question ${q.question_order}:`, error.message);
@@ -182,7 +226,7 @@ async function seed() {
       console.log(`✅ Seeded question ${q.question_order} successfully.`);
     }
   }
-  
+
   console.log('\n🎉 Done seeding Round 3!');
 }
 

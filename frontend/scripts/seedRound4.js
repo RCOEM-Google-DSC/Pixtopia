@@ -2,31 +2,39 @@
  * Seed script for Round 4 (Visual Puzzle – Part A)
  *
  * Each puzzle contains 2 images that together hint at a hidden word (rebus-style).
- * Images are read from:  frontend/public/Round4/{order}-1.png, {order}-2.png
+ * Images are read from:  frontend/public/Round4/{order}.1.jpeg, {order}.2.jpeg (etc.)
  * Answers are read from: scripts/round4.json (keys "1" through "7")
- * If a local file is not found, the placeholder URL in the data below is kept.
+ *
+ * Uploads images to Cloudinary (folder: round4) instead of Supabase storage.
  *
  * Usage:
  *   node scripts/seedRound4.js
  *
- * Required env (frontend/.env.local):
+ * Required env (frontend/.env):
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
+ *   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+ *   CLOUDINARY_API_KEY
+ *   CLOUDINARY_API_SECRET
  */
 
-require("dotenv").config({ path: "../.env.local" });
-const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
 const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+const { createClient } = require("@supabase/supabase-js");
+const cloudinary = require("cloudinary").v2;
+const sharp = require("sharp");
+const fs = require("fs");
+const os = require("os");
 const round4Answers = require("./round4.json");
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB — Cloudinary free plan limit
+
+// ─── Supabase (DB only) ──────────────────────────────────────────────────────
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error(
-    "❌  Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local",
-  );
+  console.error("❌  Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   if (process.env.NODE_ENV !== "test") process.exit(1);
 }
 
@@ -36,22 +44,33 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
-const BUCKET_NAME = "round4";
+// ─── Cloudinary configuration ────────────────────────────────────────────────
+const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const API_KEY = process.env.CLOUDINARY_API_KEY;
+const API_SECRET = process.env.CLOUDINARY_API_SECRET;
+
+if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
+  console.error("❌  Missing Cloudinary env vars (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)");
+  if (process.env.NODE_ENV !== "test") process.exit(1);
+}
+
+cloudinary.config({
+  cloud_name: CLOUD_NAME,
+  api_key: API_KEY,
+  api_secret: API_SECRET,
+});
+
+const CLOUDINARY_FOLDER = "round4";
 const IMAGES_DIR = path.join(__dirname, "../public/Round4");
+
 // Placeholder service used when local images are absent
 const PLACEHOLDER = (w, h, label) =>
   `https://placehold.co/${w}x${h}/1e1e2e/6366f1?text=${encodeURIComponent(label)}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Puzzle data  (Pixar rebus theme)
-//
-// Each puzzle: two images that together spell / imply `answer`.
-// order   – question order (maps to ?order= param in the API)
-// image_labels – human labels used for placeholder URLs
-// answer  – the hidden word participants must guess (UPPER-CASE recommended)
+// Puzzle data
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Generate image_labels by splitting the answer into two halves
 function generateImageLabels(answer) {
   const mid = Math.ceil(answer.length / 2);
   return [answer.slice(0, mid), answer.slice(mid)];
@@ -67,82 +86,107 @@ for (let order = 1; order <= 7; order++) {
     image_labels,
     answer,
     points: 100,
-    localFiles: [`${order}-1.png`, `${order}-2.png`],
     image_urls: [PLACEHOLDER(400, 300, image_labels[0]), PLACEHOLDER(400, 300, image_labels[1])],
   });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Storage helpers
+// Cloudinary helpers
 // ─────────────────────────────────────────────────────────────────────────────
-async function ensureBucket() {
-  const { data: buckets, error } = await supabase.storage.listBuckets();
-  if (error) {
-    console.error("❌  listBuckets:", error.message);
-    return;
-  }
-
-  if (!buckets?.find((b) => b.name === BUCKET_NAME)) {
-    console.log(`🪣  Creating public bucket '${BUCKET_NAME}'…`);
-    const { error: createErr } = await supabase.storage.createBucket(
-      BUCKET_NAME,
-      { public: true },
-    );
-    if (createErr) console.error("❌  createBucket:", createErr.message);
+async function ensureCloudinaryFolder() {
+  try {
+    await cloudinary.api.create_folder(CLOUDINARY_FOLDER);
+    console.log(`📁 Cloudinary folder '${CLOUDINARY_FOLDER}' ready.`);
+  } catch (err) {
+    if (err?.error?.message?.includes("already exists")) {
+      console.log(`📁 Cloudinary folder '${CLOUDINARY_FOLDER}' already exists.`);
+    } else {
+      console.log(`📁 Cloudinary folder '${CLOUDINARY_FOLDER}' created or already exists.`);
+    }
   }
 }
 
+async function compressIfNeeded(filePath, fileName) {
+  const stats = fs.statSync(filePath);
+  if (stats.size <= MAX_FILE_SIZE) return filePath;
+
+  console.log(`   🗜️  Compressing ${fileName} (${(stats.size / 1024 / 1024).toFixed(2)} MB > 10 MB limit)...`);
+  const tempPath = path.join(os.tmpdir(), `compressed_${Date.now()}_${path.parse(fileName).name}.jpg`);
+  await sharp(filePath)
+    .resize({ width: 1920, withoutEnlargement: true })
+    .jpeg({ quality: 85 })
+    .toFile(tempPath);
+  const newStats = fs.statSync(tempPath);
+  console.log(`   🗜️  Compressed to ${(newStats.size / 1024 / 1024).toFixed(2)} MB`);
+  return tempPath;
+}
+
 /**
- * Upload a specific image file to storage
- * Returns the public URL, or null if upload failed or file not found.
+ * Find a local image file for a given puzzle order and image index (1 or 2).
+ * Tries patterns like: {order}.{index}.jpeg, {order}.{index}.png, {order}.{index}.jpg,
+ *                       {order}-{index}.png, {order}-{index}.jpeg, etc.
  */
-async function uploadImage(filePath) {
-  if (!fs.existsSync(filePath)) {
+function findLocalImage(order, imageIndex) {
+  if (!fs.existsSync(IMAGES_DIR)) return null;
+  const files = fs.readdirSync(IMAGES_DIR);
+
+  // Try dotted pattern first (1.1.jpeg, 1.2.jpeg)
+  const dotPrefix = `${order}.${imageIndex}.`;
+  const dotMatch = files.find(f => f.startsWith(dotPrefix));
+  if (dotMatch) return path.join(IMAGES_DIR, dotMatch);
+
+  // Try dashed pattern (1-1.png, 1-2.png)
+  const dashPrefix = `${order}-${imageIndex}.`;
+  const dashMatch = files.find(f => f.startsWith(dashPrefix));
+  if (dashMatch) return path.join(IMAGES_DIR, dashMatch);
+
+  return null;
+}
+
+/**
+ * Upload a specific image file to Cloudinary.
+ * Returns the secure URL, or null if upload failed or file not found.
+ */
+async function uploadImage(filePath, publicId) {
+  if (!filePath || !fs.existsSync(filePath)) {
     console.log(`   ℹ️   File not found: ${filePath}`);
     return null;
   }
 
   const filename = path.basename(filePath);
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeMap = {
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".webp": "image/webp",
-    ".gif": "image/gif",
-  };
-  const contentType = mimeMap[ext] || "image/png";
-  const storageName = `${Date.now()}_${filename}`;
+  console.log(`   📤  Uploading ${filename} to Cloudinary...`);
 
-  console.log(`   📤  Uploading ${filename}…`);
-  const { error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .upload(storageName, fs.readFileSync(filePath), {
-      contentType,
-      upsert: true,
+  let uploadPath = filePath;
+  try {
+    uploadPath = await compressIfNeeded(filePath, filename);
+
+    const result = await cloudinary.uploader.upload(uploadPath, {
+      public_id: publicId,
+      overwrite: true,
+      resource_type: "image",
     });
-
-  if (error) {
-    console.error(`   ❌  Upload failed: ${error.message}`);
+    console.log(`   ✅  Uploaded: ${result.secure_url}`);
+    return result.secure_url;
+  } catch (err) {
+    console.error(`   ❌  Upload failed for ${filename}:`, err.message);
     return null;
+  } finally {
+    if (uploadPath !== filePath && fs.existsSync(uploadPath)) {
+      fs.unlinkSync(uploadPath);
+    }
   }
-
-  const { data: urlData } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(storageName);
-  return urlData.publicUrl;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main seed
 // ─────────────────────────────────────────────────────────────────────────────
 async function seed() {
-  console.log("🚀  Seeding Round 4 (Visual Puzzle) questions…\n");
+  console.log("🚀  Seeding Round 4 (Visual Puzzle) questions…");
+  console.log("☁️   Using Cloudinary for image storage\n");
 
-  await ensureBucket();
+  await ensureCloudinaryFolder();
 
-  // Wipe all existing round-4 rows first so stale orders (e.g. 3/4/5 from old
-  // seed runs) never linger in the table.
+  // Wipe all existing round-4 rows first
   console.log("🗑️   Clearing all existing round-4 questions…");
   const { data: allExisting } = await supabase
     .from("questions")
@@ -162,18 +206,17 @@ async function seed() {
 
     const finalUrls = [...puzzle.image_urls];
 
-    // Upload each local image if it exists
+    // Upload each local image (2 per puzzle) to Cloudinary
     for (let i = 0; i < 2; i++) {
-      const localFileName = puzzle.localFiles[i];
-      const filePath = path.join(IMAGES_DIR, localFileName);
-      const url = await uploadImage(filePath);
+      const localFile = findLocalImage(puzzle.order, i + 1);
+      const publicId = `${CLOUDINARY_FOLDER}/q${puzzle.order}_img${i + 1}`;
+      const url = await uploadImage(localFile, publicId);
       if (url) {
-        console.log(`   ✅  Image ${i + 1} uploaded: ${url}`);
         finalUrls[i] = url;
       }
     }
 
-    // Insert fresh row (all old rows were wiped above)
+    // Insert fresh row
     const row = {
       round_id: "4",
       order: puzzle.order,
