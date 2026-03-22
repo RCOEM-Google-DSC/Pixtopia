@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { getSessionUser, createAdminClient } from "@/lib/supabase/server";
 
 /**
  * POST /api/rounds/1/submit
@@ -14,13 +14,8 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { getSessionUser, createAdminClient } from "@/lib/supabase/server";
 import { unstable_cache } from "next/cache";
 
 const MAX_PART_A_HINTS = 3;
@@ -71,20 +71,7 @@ export async function POST(request: NextRequest) {
 
     const { currentAnswer, questionOrder = 1 } = body;
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError) {
-      if (isTransientAuthFailure(authError)) {
-        return NextResponse.json(
-          { error: "Authentication service temporarily unavailable" },
-          { status: 503 },
-        );
-      }
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await getSessionUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

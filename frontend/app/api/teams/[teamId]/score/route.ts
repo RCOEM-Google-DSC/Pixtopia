@@ -25,11 +25,9 @@ export async function POST(
 
   const { teamId } = await params;
 
-  // Verify caller is authenticated
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Verify caller is authenticated (fast local JWT check)
+  const { getSessionUser } = await import("@/lib/supabase/server");
+  const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

@@ -286,6 +286,12 @@ export default function LoginPage() {
     // Pre-fetch the dashboard page so it's ready when the user logs in
     router.prefetch("/dashboard");
 
+    // Eagerly initialize the Supabase client & warm up the auth connection
+    // while the car animation plays (~5s). This way, by the time the user
+    // sees the login form, the TLS handshake is done and auth calls are instant.
+    const supabase = createClient();
+    supabase.auth.getSession(); // fire-and-forget — just warms the connection
+
     const t1 = setTimeout(() => setAnimState("zoomin"), 400);
     const t2 = setTimeout(() => setAnimState("drift"), 2200);
     const t3 = setTimeout(() => setAnimState("exit"), 4000);

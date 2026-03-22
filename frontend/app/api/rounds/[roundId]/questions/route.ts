@@ -12,15 +12,13 @@ export async function GET(
 ) {
   const { roundId } = await params;
 
-  const supabase = await createClient();
-
-  // Verify session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { getSessionUser, createClient } = await import("@/lib/supabase/server");
+  const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("questions")

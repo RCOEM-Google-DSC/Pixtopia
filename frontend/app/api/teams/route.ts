@@ -17,15 +17,14 @@ export async function GET(request: NextRequest) {
 
   // If leaderId is provided, require authentication and return full data
   if (leaderId) {
-    const [supabase, admin] = await Promise.all([createClient(), createAdminClient()]);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { getSessionUser, createAdminClient } = await import("@/lib/supabase/server");
+    const user = await getSessionUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Use admin client to bypass RLS for faster query; also check team_members_ids
+    const admin = await createAdminClient();
     const { data, error } = await admin
       .from("teams")
       .select("id, team_name, points, leader_id, team_members_ids, password")

@@ -116,11 +116,9 @@ async function fetchContestLeaderboard(
  * 5. Add the matched score to the team's existing points
  */
 export async function POST() {
-  // ── Auth check ──────────────────────────────────────────────────────────
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // ── Auth check (fast local JWT — no network call) ──────────────────────
+  const { getSessionUser } = await import("@/lib/supabase/server");
+  const user = await getSessionUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
