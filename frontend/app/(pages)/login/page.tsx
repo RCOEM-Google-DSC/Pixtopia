@@ -378,8 +378,8 @@ export default function LoginPage() {
       />
       <SpeedLines />
 
-      {/* 3D Canvas — unmount when login form is shown to free main thread */}
-      {supabaseReady && animState !== "login" && (
+      {/* 3D Canvas */}
+      {supabaseReady && (
         <div
           className="absolute inset-0 z-10 pointer-events-none"
           style={{
@@ -455,21 +455,18 @@ export default function LoginPage() {
               <span className="text-[10px] md:text-[12.8px] text-white tracking-[1.28px]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>BACK</span>
             </a>
 
-            {/* EVE 3D floating behind the form — reduced framerate to
-                keep main thread free for auth network calls */}
+            {/* EVE 3D floating behind the form */}
             <div className="absolute inset-0 z-[15] pointer-events-none">
               <Canvas
                 camera={{ position: [0, 0, 8], fov: 50 }}
-                dpr={[1, 1]}
+                dpr={[1, 1.5]}
                 style={{ pointerEvents: 'none' }}
-                frameloop="demand"
                 eventSource={undefined as unknown as HTMLElement}
               >
                 <ambientLight intensity={1.2} />
                 <directionalLight position={[5, 5, 5]} intensity={1.5} />
                 <directionalLight position={[-5, 3, -5]} intensity={0.8} color="#a78bfa" />
                 <React.Suspense fallback={null}>
-                  <SlowTick />
                   <Eve mousePos={mousePosRef} isMouseIdle={mouseIdle} />
                   <Environment preset="city" />
                 </React.Suspense>
