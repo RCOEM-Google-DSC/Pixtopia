@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, Lock, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -295,7 +296,12 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
         body: JSON.stringify({ questionOrder: currentQuestion.question_order }),
       });
       const data = await res.json();
-      if (!res.ok) return;
+      if (!res.ok) {
+        toast.error(data.error === "Insufficient points"
+          ? "Not enough points to purchase a hint!"
+          : data.error || "Failed to get hint");
+        return;
+      }
 
       const key = String(currentQuestion.question_order);
       const newHints = { ...hintsPerQuestion, [key]: data.hintsUsedForQuestion };
