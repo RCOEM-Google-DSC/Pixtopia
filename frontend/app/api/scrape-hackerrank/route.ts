@@ -89,7 +89,7 @@ async function fetchContestLeaderboard(
     for (const item of models) {
       data.push({
         name: (item.hacker as string).toLowerCase(),
-        score: Math.round(Number(item.score || 0)),
+        score: Math.floor(Number(item.score || 0)),
       });
     }
 
