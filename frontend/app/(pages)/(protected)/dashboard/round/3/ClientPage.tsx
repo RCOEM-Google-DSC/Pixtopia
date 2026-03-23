@@ -237,7 +237,7 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionOrder, selectedIndex: currentSelection }),
-      }).catch(() => {});
+      }).catch(() => { });
 
       if (isLastQ) await submitPromise;
     }
@@ -280,7 +280,7 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ questionOrder, selectedIndex: selectedOption }),
-    }).catch(() => {});
+    }).catch(() => { });
   };
 
   // ── Get hint ──
@@ -332,8 +332,18 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
   // ── Loading ──
   if (loading || teamLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col">
-        <div className="p-8 space-y-8 max-w-5xl mx-auto w-full" data-testid="loading-state">
+      <div className="relative min-h-screen flex flex-col">
+        <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+          <img
+            src="/round3bg.jpg"
+            alt="Round 3 Background"
+            className="h-full w-full object-cover object-center"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+        <div className="fixed inset-0 z-0 bg-black/30" />
+        <div className="relative z-10 p-8 space-y-8 max-w-5xl mx-auto w-full" data-testid="loading-state">
           <Skeleton className="h-12 w-3/4 bg-zinc-900" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {[1, 2, 3, 4].map((i) => (
@@ -347,11 +357,21 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
 
   if (roundStatus === "locked") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <div className="text-center">
-          <Lock size={36} className="text-zinc-600 mx-auto mb-4" />
+      <div className="relative min-h-screen flex items-center justify-center text-white">
+        <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+          <img
+            src="/round3bg.jpg"
+            alt="Round 3 Background"
+            className="h-full w-full object-cover object-center"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+        <div className="fixed inset-0 z-0 bg-black/30" />
+        <div className="relative z-10 text-center bg-zinc-950/65 backdrop-blur-sm border border-zinc-700/80 rounded-xl px-8 py-7">
+          <Lock size={36} className="text-zinc-200 mx-auto mb-4" />
           <h2 className="text-xl font-bold tracking-wide">ROUND 3 LOCKED</h2>
-          <p className="text-zinc-500 text-sm mt-2">Waiting for the admin to start this round.</p>
+          <p className="text-zinc-200 text-base mt-2">Waiting for the admin to start this round.</p>
           <button onClick={() => router.push("/dashboard")} className="mt-6 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 rounded-lg text-sm tracking-wide transition-colors">← Back</button>
         </div>
       </div>
@@ -360,11 +380,21 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
 
   if (roundStatus === "completed" && !completed) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <div className="text-center">
-          <AlertCircle size={36} className="text-zinc-500 mx-auto mb-4" />
+      <div className="relative min-h-screen flex items-center justify-center text-white">
+        <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+          <img
+            src="/round3bg.jpg"
+            alt="Round 3 Background"
+            className="h-full w-full object-cover object-center"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+        <div className="fixed inset-0 z-0 bg-black/30" />
+        <div className="relative z-10 text-center bg-zinc-950/65 backdrop-blur-sm border border-zinc-700/80 rounded-xl px-8 py-7">
+          <AlertCircle size={36} className="text-zinc-200 mx-auto mb-4" />
           <h2 className="text-xl font-bold tracking-wide">ROUND 3 ENDED</h2>
-          <p className="text-zinc-500 text-sm mt-2">Submissions are closed.</p>
+          <p className="text-zinc-200 text-base mt-2">Submissions are closed.</p>
           <button onClick={() => router.push("/dashboard")} className="mt-6 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 rounded-lg text-sm tracking-wide transition-colors">← Back</button>
         </div>
       </div>
@@ -384,9 +414,19 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
     }, 0);
 
     return (
-      <div className="min-h-screen bg-black flex flex-col">
+      <div className="relative min-h-screen flex flex-col">
+        <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+          <img
+            src="/round3bg.jpg"
+            alt="Round 3 Background"
+            className="h-full w-full object-cover object-center"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+        <div className="fixed inset-0 z-0 bg-black/30" />
         <div
-          className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center"
+          className="relative z-10 flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center"
           data-testid="completed-state"
         >
           <svg className="w-12 h-12 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -399,17 +439,17 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
           <div className="flex justify-center gap-8 mt-4">
             <div className="text-center">
               <p className="text-3xl font-black text-white">{correctCount}</p>
-              <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Correct</p>
+              <p className="text-white text-[11px] uppercase tracking-widest mt-1">Correct</p>
             </div>
             <div className="w-px bg-zinc-800" />
             <div className="text-center">
               <p className="text-3xl font-black text-white">{wrongCount}</p>
-              <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Wrong</p>
+              <p className="text-white text-[11px] uppercase tracking-widest mt-1">Wrong</p>
             </div>
             <div className="w-px bg-zinc-800" />
             <div className="text-center">
               <p className="text-3xl font-black text-amber-400">+{roundScore}</p>
-              <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Points</p>
+              <p className="text-white text-[11px] uppercase tracking-widest mt-1">Points</p>
             </div>
           </div>
 
@@ -428,7 +468,7 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
           )}
 
           <button
-            className="mt-8 border border-zinc-700 hover:border-zinc-500 text-white px-8 py-3 text-sm tracking-[0.2em] uppercase rounded-lg transition-all"
+            className="mt-8 border border-zinc-700 hover:border-white text-white px-8 py-3 text-sm tracking-[0.2em] uppercase rounded-lg transition-all"
             onClick={() => (window.location.href = "/dashboard")}
           >
             Back to Dashboard
@@ -440,34 +480,43 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
 
   // ── Question view ──
   return (
-    <div className="h-screen bg-black flex flex-col overflow-hidden">
-      <main className="flex-1 flex flex-col justify-between px-4 py-3 max-w-5xl mx-auto w-full min-h-0">
+    <div className="relative h-screen flex flex-col overflow-hidden">
+      <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+        <img
+          src="/round3bg.jpg"
+          alt="Round 3 Background"
+          className="h-full w-full object-cover object-center"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+      <div className="fixed inset-0 z-0 bg-black/30" />
+      <main className="relative z-10 flex-1 flex flex-col justify-between px-6 py-4 max-w-6xl mx-auto w-full min-h-0">
         {currentQuestion && (
           <div key={currentQuestionIndex} className="flex-1 flex flex-col justify-between min-h-0 animate-[fadeIn_0.3s_ease-in]">
             <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
             {/* Header */}
-            <div className="text-center space-y-2 shrink-0">
-              <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
+            <div className="text-center space-y-3 shrink-0">
+              <span className="text-xs font-bold text-zinc-200 uppercase tracking-widest">
                 Question {currentQuestionIndex + 1} of {TOTAL_QUESTIONS}
               </span>
-              <h1 className="text-xl md:text-2xl font-bold text-white leading-tight">
+              <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
                 {currentQuestion.question}
               </h1>
 
-              <div className="w-full max-w-md mx-auto space-y-1">
+              <div className="w-full max-w-lg mx-auto space-y-1.5">
                 {timeLeft !== null && (
                   <>
-                    <div className="flex items-center justify-center gap-1.5 font-mono font-bold text-lg">
+                    <div className="flex items-center justify-center gap-2 font-mono font-bold text-xl">
                       <Clock size={16} className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-white"} />
                       <span className={timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-white"}>
                         00:{timeLeft.toString().padStart(2, '0')}
                       </span>
                     </div>
-                    <div className="w-full h-[2px] bg-zinc-900 rounded-full overflow-hidden">
+                    <div className="w-full h-0.5 bg-zinc-800 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-1000 ${
-                          timeLeft <= 10 ? "bg-red-500" : timeLeft <= 30 ? "bg-amber-400" : "bg-white"
-                        }`}
+                        className={`h-full rounded-full transition-all duration-1000 ${timeLeft <= 10 ? "bg-red-500" : timeLeft <= 30 ? "bg-amber-400" : "bg-white"
+                          }`}
                         style={{ width: `${(timeLeft / 60) * 100}%` }}
                       />
                     </div>
@@ -482,7 +531,7 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
                 {unlockedHints.map((hint, i) => (
                   <div
                     key={i}
-                    className="p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg text-xs text-zinc-400 italic mb-1"
+                    className="p-3 bg-zinc-950/70 backdrop-blur-sm border border-zinc-700/80 rounded-lg text-sm text-zinc-100 italic mb-2"
                   >
                     &ldquo;{hint}&rdquo;
                   </div>
@@ -491,19 +540,18 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
             )}
 
             {/* Image grid */}
-            <div className="grid grid-cols-2 gap-3 mt-3 flex-1 min-h-0 max-w-3xl mx-auto w-full max-h-[55vh]">
+            <div className="grid grid-cols-2 gap-4 mt-4 flex-1 min-h-0 max-w-4xl mx-auto w-full max-h-[60vh]">
               {currentQuestion.image_urls.map((url, index) => (
                 <Card
                   key={index}
-                  className={`group overflow-hidden border-[3px] transition-all duration-300 ${
-                    answerLocked
+                  className={`group overflow-hidden border-white border-2  transition-all duration-300 ${answerLocked
                       ? selectedOption === index
                         ? "border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)] cursor-default"
                         : "border-zinc-800 opacity-40 cursor-default"
                       : selectedOption === index
                         ? "border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)] cursor-pointer"
                         : "border-zinc-800 hover:border-zinc-600 cursor-pointer"
-                  }`}
+                    }`}
                   onClick={() => !answerLocked && setSelectedOption(index)}
                 >
                   <CardContent className="p-0 relative h-full overflow-hidden bg-white">
@@ -513,14 +561,13 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
                       className="w-full h-full object-contain"
                     />
                     <div
-                      className={`absolute inset-0 transition-opacity duration-300 ${
-                        selectedOption === index
+                      className={`absolute inset-0 transition-opacity duration-300 ${selectedOption === index
                           ? "bg-sky-500/10 opacity-100"
                           : "bg-transparent opacity-0"
-                      }`}
+                        }`}
                     />
                     <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded border border-white/10">
-                      <span className="text-[10px] font-bold text-zinc-300 uppercase">
+                      <span className="text-xs font-bold text-zinc-100 uppercase">
                         Option {index + 1}
                       </span>
                     </div>
@@ -530,29 +577,22 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
             </div>
 
             {/* Bottom action bar */}
-            <div className="shrink-0 py-3 flex items-center justify-center gap-4">
+            <div className="shrink-0 py-4 flex items-center justify-center gap-5">
               {answerLocked ? (
-                <div className="flex items-center gap-2 px-4 py-2 border border-zinc-700 rounded-lg">
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex items-center gap-2 px-5 py-2.5 border border-zinc-600 bg-zinc-950/70 rounded-lg">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-zinc-300 font-medium uppercase tracking-widest text-xs">Locked In</span>
+                  <span className="text-zinc-100 font-medium uppercase tracking-widest text-sm">Locked In</span>
                 </div>
               ) : (
                 <>
-                  <Button
-                    className="bg-white hover:bg-zinc-200 text-black px-8 py-5 text-sm tracking-widest font-bold uppercase rounded-lg transition-all disabled:opacity-50"
-                    disabled={selectedOption === null || submitting || (timeLeft !== null && timeLeft <= 0)}
-                    onClick={handleSubmit}
-                  >
-                    {submitting ? "Submitting..." : "Submit"}
-                  </Button>
                   {hintsUnlockedForCurrent === 0 && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="outline"
-                          className="border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900 px-4 py-5 text-xs"
+                          className="bg-white tracking-widest text-xl font-bold p-6 "
                           disabled={requestingHint}
                         >
                           {requestingHint ? "Unlocking..." : "Get Hint"}
@@ -579,6 +619,13 @@ export default function Round3ClientPage({ initialData }: { initialData: any }) 
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
+                  <Button
+                    className="bg-white hover:bg-zinc-200 text-black px-10 py-6 text-base tracking-widest font-bold uppercase rounded-lg transition-all disabled:opacity-50"
+                    disabled={selectedOption === null || submitting || (timeLeft !== null && timeLeft <= 0)}
+                    onClick={handleSubmit}
+                  >
+                    {submitting ? "Submitting..." : "Submit"}
+                  </Button>
                 </>
               )}
             </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from "@/lib/authContext";
 import { useTeam } from "@/lib/useTeam";
 import {
@@ -280,19 +281,41 @@ export default function Round1Page() {
 
   if (loading || teamLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="relative min-h-screen flex items-center justify-center">
+        <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+          <Image
+            src="/round1bg.jpg"
+            alt="Round 1 Background"
+            fill
+            className="object-cover"
+            priority
+            quality={100}
+          />
+        </div>
+        <div className="fixed inset-0 z-0 bg-black/45" />
+        <div className="relative z-10 w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (roundStatus === "locked") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <div className="text-center">
-          <Lock size={36} className="text-zinc-600 mx-auto mb-4" />
+      <div className="relative min-h-screen flex items-center justify-center text-white">
+        <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+          <Image
+            src="/round1bg.jpg"
+            alt="Round 1 Background"
+            fill
+            className="object-cover"
+            priority
+            quality={100}
+          />
+        </div>
+        <div className="fixed inset-0 z-0 bg-black/45" />
+        <div className="relative z-10 text-center bg-zinc-950/65 backdrop-blur-sm border border-zinc-700/80 rounded-xl px-8 py-7">
+          <Lock size={36} className="text-zinc-200 mx-auto mb-4" />
           <h2 className="text-xl font-bold tracking-wide">ROUND 1 LOCKED</h2>
-          <p className="text-zinc-500 text-sm mt-2">Waiting for the admin to start this round.</p>
+          <p className="text-zinc-200 text-base mt-2">Waiting for the admin to start this round.</p>
           <button onClick={() => router.push("/dashboard")} className="mt-6 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 rounded-lg text-sm tracking-wide transition-colors">← Back</button>
         </div>
       </div>
@@ -301,11 +324,22 @@ export default function Round1Page() {
 
   if (roundStatus === "completed") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <div className="text-center">
-          <AlertCircle size={36} className="text-zinc-500 mx-auto mb-4" />
+      <div className="relative min-h-screen flex items-center justify-center text-white">
+        <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+          <Image
+            src="/round1bg.jpg"
+            alt="Round 1 Background"
+            fill
+            className="object-cover"
+            priority
+            quality={100}
+          />
+        </div>
+        <div className="fixed inset-0 z-0 bg-black/45" />
+        <div className="relative z-10 text-center bg-zinc-950/65 backdrop-blur-sm border border-zinc-700/80 rounded-xl px-8 py-7">
+          <AlertCircle size={36} className="text-zinc-200 mx-auto mb-4" />
           <h2 className="text-xl font-bold tracking-wide">ROUND 1 ENDED</h2>
-          <p className="text-zinc-500 text-sm mt-2">Submissions are closed.</p>
+          <p className="text-zinc-200 text-base mt-2">Submissions are closed.</p>
           <button onClick={() => router.push("/dashboard")} className="mt-6 px-5 py-2.5 border border-zinc-700 hover:border-zinc-500 rounded-lg text-sm tracking-wide transition-colors">← Back</button>
         </div>
       </div>
@@ -319,8 +353,19 @@ export default function Round1Page() {
     const wrong = questions.length - correct;
 
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col py-12 px-4">
-        <div className="max-w-3xl w-full mx-auto space-y-8">
+      <div className="relative min-h-screen text-white flex flex-col py-12 px-4">
+        <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+          <Image
+            src="/round1bg.jpg"
+            alt="Round 1 Background"
+            fill
+            className="object-cover"
+            priority
+            quality={100}
+          />
+        </div>
+        <div className="fixed inset-0 z-0 bg-black/45" />
+        <div className="relative z-10 max-w-3xl w-full mx-auto space-y-8">
           <div className="text-center space-y-3">
             <CheckCircle size={48} className="text-white mx-auto" />
             <h1 className="text-2xl font-bold tracking-wide">ROUND 1 COMPLETE</h1>
@@ -328,42 +373,44 @@ export default function Round1Page() {
             <div className="flex justify-center gap-8 mt-6">
               <div className="text-center">
                 <p className="text-3xl font-black text-white">{correct}</p>
-                <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Correct</p>
+                <p className="text-white text-[11px] uppercase tracking-widest mt-1">Correct</p>
               </div>
-              <div className="w-px bg-zinc-800" />
+              <div className="w-px bg-white/60" />
               <div className="text-center">
                 <p className="text-3xl font-black text-white">{wrong}</p>
-                <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Wrong</p>
+                <p className="text-white text-[11px] uppercase tracking-widest mt-1">Wrong</p>
               </div>
-              <div className="w-px bg-zinc-800" />
+              <div className="w-px bg-white/60" />
               <div className="text-center">
                 <p className="text-3xl font-black text-amber-400">+{score}</p>
-                <p className="text-zinc-500 text-[11px] uppercase tracking-widest mt-1">Points</p>
+                <p className="text-white text-[11px] uppercase tracking-widest mt-1">Points</p>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-zinc-800 pt-6 space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4">Summary</h2>
+          <div className="border-t border-white/60 pt-6 space-y-3">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-white mb-4">Summary</h2>
             {questions.map((q, i) => {
               const userChoice = ls.answers[q.id];
               const isCorrect = userChoice === q.correct_index;
               return (
-                <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-zinc-800' : 'border-zinc-800 bg-zinc-950'}`}>
-                  <p className="text-sm mb-2 leading-relaxed text-zinc-300">
-                    <span className="text-zinc-500 mr-2">{i + 1}.</span>{q.question}
+                <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-emerald-400 bg-white/20 border-4 p-12 backdrop-blur-md shadow-2xl' : 'bg-white/20 border-4 border-[#ff7c7c] p-12 backdrop-blur-md shadow-2xl'}`}>
+                  <p className="text-lg mb-2 leading-relaxed text-zinc-300">
+                    <span className="text-white  mr-2">{i + 1}.</span>{q.question}
                   </p>
                   <div className="text-xs space-y-1">
                     <p>
-                      <span className="text-zinc-600 mr-2">Your answer:</span>
-                      <span className={isCorrect ? "text-green-400" : "text-red-400"}>
+                      <span className="text-white mr-2 text-xl">Your answer:</span>
+                      <span className={isCorrect ? "text-green-400 text-xl" : "text-[#c00000] text-xl"}>
                         {userChoice >= 0 ? q.options?.[userChoice] : "No answer"}
                       </span>
                     </p>
                     {!isCorrect && (
                       <p>
-                        <span className="text-zinc-600 mr-2">Correct:</span>
-                        <span className="text-green-400">{q.options?.[q.correct_index]}</span>
+                        <span className="text-gray-300 mr-2 text-lg">Correct:</span>
+                        <span className="text-green-400 text-lg">
+                          {q.options?.[q.correct_index]}
+                        </span>
                       </p>
                     )}
                   </div>
@@ -375,7 +422,7 @@ export default function Round1Page() {
           <div className="text-center pt-4">
             <button
               onClick={() => router.push("/dashboard")}
-              className="mt-2 mb-8 border border-zinc-700 hover:border-zinc-500 text-white px-8 py-3 text-sm tracking-[0.2em] uppercase rounded-lg transition-all"
+              className="bg-white/20 mt-2 mb-8 border border-zinc-700 hover:border-white text-white px-8 py-3 text-sm tracking-[0.2em] uppercase rounded-lg transition-all"
             >
               Back to Dashboard
             </button>
@@ -393,12 +440,23 @@ export default function Round1Page() {
   const timerColor = timeLeft <= 20 ? "bg-red-500" : timeLeft <= 40 ? "bg-amber-400" : "bg-white";
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="relative min-h-screen text-white flex flex-col">
+      <div className="fixed inset-0 z-0 bg-[#aed4f4]">
+        <Image
+          src="/round1bg.jpg"
+          alt="Round 1 Background"
+          fill
+          className="object-cover"
+          priority
+          quality={100}
+        />
+      </div>
+      <div className="fixed inset-0 z-0 bg-black/45" />
       {/* Sticky progress header */}
-      <div className="sticky top-0 z-40 bg-black/90 backdrop-blur-sm border-b border-zinc-800/50 px-6 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+      <div className="sticky top-0 z-40 bg-black/90 backdrop-blur-sm border-b border-zinc-700/60 px-6 py-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-zinc-500">
+            <span className="text-base text-zinc-200">
               Q <span className="text-white font-bold">{currentQ + 1}</span> / {TOTAL}
             </span>
             <div className="hidden sm:flex gap-1">
@@ -413,13 +471,13 @@ export default function Round1Page() {
               ))}
             </div>
           </div>
-          <div className={`flex items-center gap-1.5 font-mono font-bold text-lg ${timeLeft <= 20 ? "text-red-400 animate-pulse" : "text-white"}`}>
-            <Clock size={16} />
+          <div className={`flex items-center gap-1.5 font-mono font-bold text-xl ${timeLeft <= 20 ? "text-red-300 animate-pulse" : "text-white"}`}>
+            <Clock size={18} />
             {formatTime(timeLeft)}
           </div>
         </div>
         {/* Timer bar */}
-        <div className="max-w-2xl mx-auto mt-2 h-[2px] bg-zinc-900 rounded-full overflow-hidden">
+        <div className="max-w-4xl mx-auto mt-2 h-0.5 bg-zinc-800 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-1000 ${timerColor}`}
             style={{ width: `${timerPercent}%` }}
@@ -428,29 +486,29 @@ export default function Round1Page() {
       </div>
 
       {/* Question */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
-        <div className="w-full max-w-2xl space-y-8">
-          <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-6">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-10">
+        <div className="w-full max-w-4xl space-y-9">
+          <div className="bg-zinc-950/70 backdrop-blur-sm border border-zinc-700/80 rounded-xl p-8">
             <div className="flex items-start gap-3">
-              <span className="shrink-0 w-7 h-7 rounded-full bg-white/10 text-white text-xs font-bold flex items-center justify-center">
+              <span className="shrink-0 w-9 h-9 rounded-full bg-white/15 text-white text-sm font-bold flex items-center justify-center">
                 {currentQ + 1}
               </span>
-              <p className="text-white text-[15px] leading-relaxed">{q.question}</p>
+              <p className="text-white text-lg md:text-xl leading-relaxed">{q.question}</p>
             </div>
           </div>
 
           {/* Options */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {(q.options ?? []).map((opt, idx) => {
               const isSelected = selectedOption === idx;
 
-              let cls = "text-left px-5 py-4 rounded-lg text-sm border transition-all ";
+              let cls = "text-left px-6 py-5 rounded-lg text-base border transition-all ";
               if (!answerLocked) {
-                cls += "bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900 cursor-pointer";
+                cls += "bg-zinc-950/75 backdrop-blur-sm border-zinc-700/80 text-zinc-100 hover:border-zinc-500 hover:bg-zinc-900/90 cursor-pointer";
               } else if (isSelected) {
-                cls += "bg-white/5 border-white/40 text-white";
+                cls += "bg-white/10 border-white/70 text-white";
               } else {
-                cls += "bg-zinc-950 border-zinc-900 text-zinc-600 opacity-40";
+                cls += "bg-zinc-950 border-zinc-800 text-zinc-300 opacity-60";
               }
 
               return (
@@ -460,7 +518,7 @@ export default function Round1Page() {
                   disabled={answerLocked}
                   className={cls}
                 >
-                  <span className="font-medium text-zinc-600 mr-2">
+                  <span className="font-semibold text-zinc-200 mr-2">
                     {["A", "B", "C", "D"][idx]}.
                   </span>
                   {opt}
@@ -471,9 +529,9 @@ export default function Round1Page() {
 
           {/* Locked in indicator */}
           {answerLocked && (
-            <div className="flex items-center justify-center gap-2 px-4 py-2">
-              <CheckCircle size={16} className="text-white" />
-              <span className="text-zinc-300 font-medium uppercase tracking-widest text-xs">Locked In — waiting for timer</span>
+            <div className="flex items-center justify-center gap-2 px-4 py-2 bg-zinc-950/60 border border-zinc-700/70 rounded-lg">
+              <CheckCircle size={18} className="text-white" />
+              <span className="text-zinc-100 font-medium uppercase tracking-widest text-sm">Locked In — waiting for timer</span>
             </div>
           )}
         </div>
