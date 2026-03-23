@@ -4,7 +4,7 @@ import SiteNavbar from "./Components/Navigation/DashboardNavbar";
 
 export default function Home() {
 	return (
-		<div>
+		<div className="font-thin">
 			<SiteNavbar />
 			<Hero />
 			<HomepageDesign />

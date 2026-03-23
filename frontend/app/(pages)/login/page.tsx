@@ -367,7 +367,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden" style={{ background: "#1a0505" }}>
+    <div className="relative w-full h-screen overflow-hidden font-thin" style={{ background: "#1a0505" }}>
       {/* Dark radial vignette */}
       <div
         className="absolute inset-0 z-0"
