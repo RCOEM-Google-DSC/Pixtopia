@@ -1382,7 +1382,7 @@ export default function Desktop() {
         A FEARLESS PRINCESS WHO DEFIES TRADITION TO CHOOSE HER OWN DESTINY.
         SKILLED IN ARCHERY
       </p>
-      <p className="-translate-x-full absolute font-brandon font-light h-[271px] leading-[normal] left-[1145px] not-italic text-[20px] text-right text-white top-[2876px] tracking-[4px] w-[326px]">
+      <p className="-translate-x-full absolute font-brandon font-medium h-[271px] leading-[normal] left-[1145px] not-italic text-[20px] text-right text-white top-[2876px] tracking-[4px] w-[326px]">
         “SULLEY, STRONG AND KIND, AND MIKE, WITTY AND ENERGETIC, MAKE A PERFECT
         TEAM, PROVING THAT LAUGHTER AND FRIENDSHIP ARE MORE POWERFUL THAN FEAR.”
       </p>
