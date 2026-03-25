@@ -167,7 +167,7 @@ function Desktop13Helper2({
 }: Desktop13Helper2Props) {
   return (
     <p className={clsx("text-[16px]", additionalClassNames)}>
-      <span className="font-brandon font-thin leading-[normal] not-italic">
+      <span className="font-brandon font-medium leading-[normal] not-italic">
         {text}
       </span>
       <span className="leading-[normal]">{text1}</span>
@@ -187,7 +187,7 @@ function Desktop13Helper1({
 }: Desktop13Helper1Props) {
   return (
     <p className={clsx("text-[16px]", additionalClassNames)}>
-      <span className="font-brandon font-thin leading-[1.27] not-italic">
+      <span className="font-brandon font-medium leading-[1.27] not-italic">
         {text}
       </span>
       <span className="leading-[1.27]">{text1}</span>
@@ -840,7 +840,7 @@ export default function Desktop() {
           </svg>
         </div>
       </div>
-      <p className="absolute font-brandon font-thin h-[39.542px] leading-[normal] left-[139.49px] not-italic text-[34px] text-black top-[222px] tracking-[3.4px] w-[242.072px]">
+      <p className="absolute font-brandon font-light h-[39.542px] leading-[normal] left-[139.49px] not-italic text-[34px] text-black top-[222px] tracking-[3.4px] w-[242.072px]">
         ROUND 1
       </p>
       <div className="absolute bg-white h-[372px] left-[710px] top-[192px] w-[290px]" />
@@ -922,10 +922,10 @@ export default function Desktop() {
         </div>
       </div>
       <Desktop13Helper additionalClassNames="left-[85px] top-[266.36px]" />
-      <p className="absolute mt-2 font-brandon font-thin h-[27px] leading-[normal] left-[94px] not-italic text-[19px] text-black top-[1125px] tracking-[1.9px] w-[255px]">
+      <p className="absolute mt-2 font-brandon font-light h-[27px] leading-[normal] left-[94px] not-italic text-[19px] text-black top-[1125px] tracking-[1.9px] w-[255px]">
         THE INCREDIBLES
       </p>
-      <p className="-translate-x-full absolute font-brandon font-thin h-[39.542px] leading-[normal] left-[1329.07px] not-italic text-[34px] text-black text-right top-[684px] tracking-[3.4px] w-[242.072px]">
+      <p className="-translate-x-full absolute font-brandon font-light h-[39.542px] leading-[normal] left-[1329.07px] not-italic text-[34px] text-black text-right top-[684px] tracking-[3.4px] w-[242.072px]">
         ROUND 2
       </p>
       <div
@@ -985,10 +985,10 @@ export default function Desktop() {
           />
         </div>
       </div>
-      <p className="absolute font-brandon font-thin h-[35px] leading-[normal] left-[176px] not-italic text-[40px] text-black top-[2098px] tracking-[4px] w-[230px]">
+      <p className="absolute font-brandon font-light h-[35px] leading-[normal] left-[176px] not-italic text-[40px] text-black top-[2098px] tracking-[4px] w-[230px]">
         ROUND 3
       </p>
-      <div className="absolute font-brandon font-thin h-[77px] leading-[0] left-[382px] not-italic text-[0px] text-white top-[306px] tracking-[1.6px] w-[300px] whitespace-pre-wrap">
+      <div className="absolute font-brandon font-medium h-[77px] leading-[0] left-[382px] not-italic text-[0px] text-white top-[306px] tracking-[1.6px] w-[300px] whitespace-pre-wrap">
         <Desktop13Helper1
           text="ROLE"
           text1=": SPACE RANGER TOY"
@@ -997,10 +997,10 @@ export default function Desktop() {
         <p className="leading-[1.27] mb-0 text-[2px]">&nbsp;</p>
         <Desktop13Helper1 text="TRAITS" text1=": BRAVE, LOYAL, DETERMINED" />
       </div>
-      <p className="absolute font-brandon font-thin h-[13px] leading-[normal] left-[382px] not-italic text-[16px] text-white top-[252px] tracking-[1.6px] w-[213px]">
+      <p className="absolute font-brandon font-light h-[13px] leading-[normal] left-[382px] not-italic text-[16px] text-white top-[252px] tracking-[1.6px] w-[213px]">
         TOY STORY
       </p>
-      <div className="absolute font-brandon font-thin h-[82px] leading-[0] left-[90px] not-italic text-[0px] text-black top-[1190px] tracking-[1.6px] w-[283px] whitespace-pre-wrap">
+      <div className="absolute font-brandon font-medium h-[82px] leading-[0] left-[90px] not-italic text-[0px] text-black top-[1190px] tracking-[1.6px] w-[283px] whitespace-pre-wrap">
         <Desktop13Helper2
           text="ROLE"
           text1=": SUPERHERO FAMILY"
@@ -1074,7 +1074,7 @@ export default function Desktop() {
           </div>
         </div>
       </div>
-      <p className="-translate-x-full absolute font-brandon font-thin h-[56px] leading-[normal] left-[1220px] not-italic text-[40px] text-black text-right top-[3155px] tracking-[4px] w-[254px]">
+      <p className="-translate-x-full absolute font-brandon font-light h-[56px] leading-[normal] left-[1220px] not-italic text-[40px] text-black text-right top-[3155px] tracking-[4px] w-[254px]">
         ROUND 4
       </p>
       <Desktop13Helper3 additionalClassNames="left-[869px] top-[3217px]" />
@@ -1108,7 +1108,7 @@ export default function Desktop() {
           </div>
         </div>
       </div>
-      <p className="absolute font-brandon font-thin h-[46px] leading-[normal] left-[341px] not-italic text-[40px] text-white top-[3838px] tracking-[4px] w-[254px]">
+      <p className="absolute font-brandon font-light h-[46px] leading-[normal] left-[341px] not-italic text-[40px] text-white top-[3838px] tracking-[4px] w-[254px]">
         ROUND 5
       </p>
       <div className="absolute h-0 left-[344px] top-[3899px] w-[294px]">
@@ -1322,7 +1322,7 @@ export default function Desktop() {
           </svg>
         </div>
       </div>
-      <div className="-translate-x-full absolute font-brandon font-thin h-[275px] leading-[normal] left-[982px] not-italic text-[17px] text-black text-right top-[209px] tracking-[1.7px] w-[242px]">
+      <div className="-translate-x-full absolute font-brandon font-light  h-[275px] leading-[normal] left-[982px] not-italic text-[17px] text-black text-right top-[209px] tracking-[1.7px] w-[242px]">
         <p className="mb-0">
           “A HEROIC SPACE RANGER TOY WHO BELIEVES HES ON A REAL MISSION.
         </p>
@@ -1331,10 +1331,10 @@ export default function Desktop() {
           FRIENDS AND DO THE RIGHT THING.”
         </p>
       </div>
-      <p className="-translate-x-full absolute font-brandon font-thin leading-[normal] left-[1217px] not-italic text-[24px] text-black text-right top-[3237px] tracking-[2.4px] w-[239px]">
+      <p className="-translate-x-full absolute font-brandon font-light leading-[normal] left-[1217px] not-italic text-[24px] text-black text-right top-[3237px] tracking-[2.4px] w-[239px]">
         THINK VISUALLY, SPOT PATTERNS, AND TRUST YOUR INSTINCTS TO GET IT RIGHT.
       </p>
-      <p className="absolute font-brandon font-thin h-[57px] leading-[normal] left-[90px] not-italic text-[15px] text-black top-[283px] tracking-[1.5px] w-[199px]">
+      <p className="absolute font-brandon font-light  h-[57px] leading-[normal] left-[90px] not-italic text-[15px] text-black top-[283px] tracking-[1.5px] w-[199px]">
         A RACE AGAINST TIME WHERE YOUR LOGIC, SPEED, AND INSTINCTS DECIDE HOW
         FAR YOU GO.
       </p>
@@ -1358,19 +1358,19 @@ export default function Desktop() {
           </g>
         </svg>
       </div>
-      <p className="absolute font-brandon font-thin h-[49px] leading-[normal] left-[847px] not-italic text-[16px] text-white top-[1948px] tracking-[3.2px] w-[136px]">
+      <p className="absolute font-brandon font-medium h-[49px] leading-[normal] left-[847px] not-italic text-[16px] text-white top-[1948px] tracking-[3.2px] w-[136px]">
         BRAVE
       </p>
-      <div className="absolute font-brandon font-thin h-[97px] leading-[0] left-[855px] not-italic text-[0px] text-white top-[2001px] tracking-[3.2px] w-[367px] whitespace-pre-wrap">
+      <div className="absolute font-brandon font-medium h-[97px] leading-[0] left-[855px] not-italic text-[0px] text-white top-[2001px] tracking-[3.2px] w-[367px] whitespace-pre-wrap">
         <p className="mb-0 text-[16px]">
-          <span className="font-brandon font-thin leading-[normal] not-italic">
+          <span className="font-brandon font-medium leading-[normal] not-italic">
             ROLE:
           </span>
           <span className="leading-[normal]">{` SCOTTISH PRINCESS`}</span>
         </p>
         <p className="leading-[normal] mb-0 text-[2px]">&nbsp;</p>
         <p className="text-[16px]">
-          <span className="font-brandon font-thin leading-[normal] not-italic">
+          <span className="font-brandon leading-[normal] not-italic">
             TRAITS
           </span>
           <span className="leading-[normal]">
@@ -1378,15 +1378,15 @@ export default function Desktop() {
           </span>
         </p>
       </div>
-      <p className="-translate-x-full absolute font-brandon font-thin h-[114px] leading-[normal] left-[1219px] not-italic text-[16px] text-right text-white top-[2383px] tracking-[3.2px] w-[270px]">
+      <p className="-translate-x-full absolute font-brandon font-medium h-[114px] leading-[normal] left-[1219px] not-italic text-[16px] text-right text-white top-[2383px] tracking-[3.2px] w-[270px]">
         A FEARLESS PRINCESS WHO DEFIES TRADITION TO CHOOSE HER OWN DESTINY.
         SKILLED IN ARCHERY
       </p>
-      <p className="-translate-x-full absolute font-brandon font-thin h-[271px] leading-[normal] left-[1145px] not-italic text-[20px] text-right text-white top-[2876px] tracking-[4px] w-[326px]">
+      <p className="-translate-x-full absolute font-brandon font-light h-[271px] leading-[normal] left-[1145px] not-italic text-[20px] text-right text-white top-[2876px] tracking-[4px] w-[326px]">
         “SULLEY, STRONG AND KIND, AND MIKE, WITTY AND ENERGETIC, MAKE A PERFECT
         TEAM, PROVING THAT LAUGHTER AND FRIENDSHIP ARE MORE POWERFUL THAN FEAR.”
       </p>
-      <p className="-translate-x-full absolute font-brandon font-thin h-[68px] leading-[normal] left-[1222px] not-italic text-[16px] text-right text-white top-[2498px] tracking-[3.2px] w-[266px]">{` MERIDA VALUES FREEDOM AND COURAGE ABOVE ALL.`}</p>
+      <p className="-translate-x-full absolute font-brandon font-medium h-[68px] leading-[normal] left-[1222px] not-italic text-[16px] text-right text-white top-[2498px] tracking-[3.2px] w-[266px]">{` MERIDA VALUES FREEDOM AND COURAGE ABOVE ALL.`}</p>
       <div className="absolute h-0 left-[847px] top-[1987px] w-[383px]">
         <div className="absolute inset-[-0.5px_0]">
           <svg
@@ -1419,45 +1419,45 @@ export default function Desktop() {
           </svg>
         </div>
       </div>
-      <p className="absolute font-brandon font-thin h-[126px] leading-[normal] left-[163px] not-italic text-[24px] text-black top-[2199px] tracking-[2.4px] w-[278px]">
+      <p className="absolute font-brandon font-light h-[126px] leading-[normal] left-[163px] not-italic text-[24px] text-black top-[2199px] tracking-[2.4px] w-[278px]">
         LOOKS SIMPLE… BUT THERE’S A TWIST. DECODE IMAGES, CONNECT CLUES, AND
         GUESS WHAT COMES NEXT
       </p>
-      <p className="absolute font-brandon font-thin leading-[0] left-[602px] not-italic text-[0px] text-[12px] text-white top-[2978px] tracking-[1.2px] w-[249px]">
-        <span className="font-brandon font-thin leading-[normal]">
+      <p className="absolute font-brandon font-medium leading-[0] left-[602px] not-italic text-[0px] text-[12px] text-white top-[2978px] tracking-[1.2px] w-[249px]">
+        <span className="font-brandon font-medium leading-[normal]">
           ROLE:
         </span>
         <span className="leading-[normal]">
           {` TOP SCARER`}
           <br aria-hidden="true" />
         </span>
-        <span className="font-brandon font-thin leading-[normal]">
+        <span className="font-brandon font-medium leading-[normal]">
           TRAITS:
         </span>
         <span className="leading-[normal]">{` GENTLE, KIND`}</span>
       </p>
-      <p className="absolute font-brandon font-thin leading-[0] left-[513px] not-italic text-[0px] text-[12px] text-black top-[2880px] tracking-[1.2px] w-[259px]">
-        <span className="font-brandon font-thin leading-[normal]">
+      <p className="absolute font-brandon font-medium leading-[0] left-[513px] not-italic text-[0px] text-[12px] text-black top-[2880px] tracking-[1.2px] w-[259px]">
+        <span className="font-brandon font-light leading-[normal]">
           &nbsp;
         </span>
-        <span className="font-brandon font-thin leading-[normal] text-white">
+        <span className="font-brandon  leading-[normal] text-white">
           ROLE:
         </span>
         <span className="leading-[normal] text-white">
           {` SCARE ASSISTANT / COMEDIAN`}
           <br aria-hidden="true" />
         </span>
-        <span className="font-brandon font-thin leading-[normal] text-white">
+        <span className=" leading-[normal] text-white">
           TRAITS
         </span>
         <span className="leading-[normal] text-white">
           : WITTY, ENERGETIC, LOYAL
         </span>
       </p>
-      <p className="absolute font-brandon font-thin leading-[normal] left-[340px] not-italic text-[22px] text-white top-[3027px] tracking-[2.2px] w-[218px]">
+      <p className="absolute font-brandon font-light leading-[normal] left-[340px] not-italic text-[22px] text-white top-[3027px] tracking-[2.2px] w-[218px]">
         MONSTERS, INC.
       </p>
-      <p className="absolute font-brandon font-thin leading-[normal] left-[851px] not-italic text-[22px] text-black top-[3776px] tracking-[2.2px] w-[218px]">
+      <p className="absolute font-brandon font-light leading-[normal] left-[851px] not-italic text-[22px] text-black top-[3776px] tracking-[2.2px] w-[218px]">
         CARS
       </p>
       <div
@@ -1484,24 +1484,24 @@ export default function Desktop() {
           />
         </div>
       </div>
-      <p className="absolute font-brandon font-thin h-[122px] leading-[normal] left-[344px] not-italic text-[15px] text-white top-[3917px] tracking-[1.5px] w-[214px]">
+      <p className="absolute font-brandon font-medium h-[122px] leading-[normal] left-[344px] not-italic text-[15px] text-white top-[3917px] tracking-[1.5px] w-[214px]">
         TIME TO SWITCH GEARS. EXPECT SOMETHING FUN, UNEXPECTED, AND A LITTLE
         CHAOTIC TO PUSH YOU AHEAD
       </p>
-      <p className="absolute font-brandon font-thin h-[122px] leading-[0] left-[844px] not-italic text-[15px] text-black top-[3837px] tracking-[1.5px] w-[498px]">
-        <span className="font-brandon font-thin leading-[normal]">
+      <p className="absolute font-brandon font-medium h-[122px] leading-[0] left-[844px] not-italic text-[15px] text-black top-[3837px] tracking-[1.5px] w-[498px]">
+        <span className="font-brandon font-medium leading-[normal]">
           ROLE:
         </span>
         <span className="leading-[normal]">
           {` RACE CAR`}
           <br aria-hidden="true" />
         </span>
-        <span className="font-brandon font-thin leading-[normal]">
+        <span className="font-brandon font-medium leading-[normal]">
           TRAITS:
         </span>
         <span className="leading-[normal]">{` CONFIDENT, DETERMINED, GROWTH-ORIENTED`}</span>
       </p>
-      <div className="-translate-x-full absolute font-brandon font-thin h-[122px] leading-[normal] left-[1311px] not-italic text-[14px] text-black text-right top-[3905px] tracking-[2.38px] w-[374px] whitespace-pre-wrap">
+      <div className="-translate-x-full absolute font-brandon font-medium h-[122px] leading-[normal] left-[1311px] not-italic text-[14px] text-black text-right top-[3905px] tracking-[2.38px] w-[374px] whitespace-pre-wrap">
         <p className="mb-0">{`A TALENTED RACE CAR WHO STARTS OFF SELF-CENTERED BUT LEARNS THE VALUE OF FRIENDSHIP, HUMILITY, `}</p>
         <p className="mb-0">AND TEAMWORK</p>
         <p className="mb-0">{` THROUGH `}</p>
@@ -1537,43 +1537,17 @@ export default function Desktop() {
           </g>
         </svg>
       </div>
-      <p className="-translate-x-full absolute font-brandon font-thin h-[283px] leading-[normal] left-[1347px] not-italic text-[21px] text-black text-right top-[763px] tracking-[2.1px] w-[271px]">
+      <p className="-translate-x-full absolute font-brandon font-light h-[283px] leading-[normal] left-[1347px] not-italic text-[21px] text-black text-right top-[763px] tracking-[2.1px] w-[271px]">
         CODE YOUR WAY THROUGH CHALLENGES THAT TEST NOT JUST SKILL, BUT HOW SHARP
         YOUR BRAIN REALLY IS.
       </p>
-      <p className="absolute font-brandon font-thin leading-[normal] left-[183px] not-italic text-[18px] text-white top-[4728px] tracking-[3.06px] w-[379px] whitespace-pre-wrap">
-        {`THE FINAL PHASE WHERE PARTICIPANTS USE THEIR EARNED GOLD COINS TO BID FOR GOODIES. ITEMS INCLUDE BOTH REVEALED PRIZES AND MYSTERY BOXES, MAKING IT EXCITING AND UNPREDICTABLE. `}
+      <p className="absolute font-brandon font-light leading-[normal] left-[183px] not-italic text-[18px] text-white top-[4728px] tracking-[3.06px] w-[379px] whitespace-pre-wrap">
+        {`THE FINAL PHASE WHERE PARTICIPANTS USED THEIR EARNED GOLD COINS TO BID FOR GOODIES. ITEMS INCLUDED BOTH REVEALED PRIZES AND MYSTERY BOXES, MAKING IT EXCITING AND UNPREDICTABLE. `}
         <br aria-hidden="true" />
         {` `}
       </p>
-      <p className="absolute font-brandon font-thin h-[218px] leading-[0] left-[183px] not-italic text-[18px] text-white top-[4912px] tracking-[3.06px] w-[435px]">
-        <span className="leading-[normal]">
-          PARTICIPANTS MUST BID WISELY, MANAGE THEIR COINS,
-        </span>
-        <span className="leading-[normal]">PLAY IT SMART</span>
-        <span className="leading-[normal]">{`, `}</span>
-        <span className="leading-[normal]">
-          BLUFF AND BATTLE IT OUT TO GRAB THE GOODIES
-        </span>
-      </p>
-      <p className="-translate-x-1/2 absolute font-brandon font-thin h-[22px] leading-[normal] left-[345px] not-italic text-[18px] text-center text-white top-[5119px] tracking-[8.28px] w-[232px] pointer-events-none z-30">
-        LEADERBOARD
-      </p>
-      <Link
-        href="/leaderboard"
-        className="absolute flex items-center justify-center border border-solid border-white h-[62px] left-[205px] rounded-[31px] top-[5099px] w-[280px] z-20 cursor-pointer hover:bg-white/10 transition-colors"
-      />
-      <Desktop13Helper7 additionalClassNames="left-[193px] size-[23px] top-[5042px]">
-        <circle
-          cx="11.5"
-          cy="11.5"
-          fill="var(--fill-0, #FF0000)"
-          id="Ellipse 5"
-          r="11.5"
-        />
-      </Desktop13Helper7>
-      <div className="absolute contents left-0 top-[5526px]">
-        <div className="absolute bg-[#161616] h-[315.444px] left-0 top-[5526px] w-[1425.999px]" />
+      <div className="absolute contents left-0 top-1381.5">
+        <div className="absolute bg-[#161616] h-[315.444px] left-0 top-1381.5 w-[1425.999px]" />
         <div
           className="absolute contents inset-[94.98%_42.78%_3.21%_40.88%]"
           data-name="gdg logo"
@@ -1704,7 +1678,7 @@ export default function Desktop() {
           <div className="absolute bg-[rgba(0,0,0,0.54)] inset-0" />
         </Group513269941A252Ec6E4082Af60F064Bdf>
       </div>
-      <p className="absolute font-brandon font-thin h-[275px] leading-[normal] left-[90px] not-italic text-[17px] text-black top-[1317px] tracking-[1.7px] w-[293px]">
+      <p className="absolute font-brandon font-medium h-[275px] leading-[normal] left-[90px] not-italic text-[17px] text-black top-[1317px] tracking-[1.7px] w-[293px]">
         A FAMILY OF SUPERHEROES BALANCING NORMAL LIFE WITH SAVING THE WORLD.
         EACH MEMBER HAS UNIQUE POWERS, BUT THEIR GREATEST STRENGTH IS TEAMWORK
         AND FAMILY BONDS.
@@ -1813,7 +1787,7 @@ export default function Desktop() {
           </svg>
         </div>
       </a>
-      <p className="-translate-x-1/2 absolute font-brandon font-thin leading-[normal] left-[695px] not-italic text-[17px] text-center text-white top-[5737px] tracking-[1.7px] whitespace-nowrap">
+      <p className="-translate-x-1/2 absolute font-brandon font-light leading-[normal] left-[695px] not-italic text-[17px] text-center text-white top-[5737px] tracking-[1.7px] whitespace-nowrap">
         MEET US ON WWW.GDGRBU.TECH
       </p>
     </div>
