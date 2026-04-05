@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
@@ -15,7 +15,6 @@ const SiteNavbar = () => {
     router.push("/login");
   };
 
-  // Build contextual links based on current page
   const navLinks = useMemo(() => {
     const onDashboard = pathname?.startsWith("/dashboard");
     const onLeaderboard = pathname?.startsWith("/leaderboard");
@@ -47,7 +46,7 @@ const SiteNavbar = () => {
             <Link
               key={link.label}
               href={link.href}
-              className="text-[13px] font-medium tracking-[0.2em] text-zinc-400 hover:text-white transition-colors duration-300 py-4"
+              className="text-[15px] font-semibold tracking-[0.2em] text-zinc-200 hover:text-white transition-colors duration-300 py-4"
             >
               {link.label}
             </Link>

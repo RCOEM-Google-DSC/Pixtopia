@@ -17,7 +17,7 @@ import {
   SewingPinIcon,
 } from "@radix-ui/react-icons";
 import { subscribeToLeaderboard } from "@/lib/database";
-import SiteNavbar from "@/app/Components/Navigation/DashboardNavbar";
+import DashboardNavbar from "@/app/Components/Navigation/DashboardNavbar";
 import Footer from "@/app/Components/Footer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ export default function LeaderboardPage() {
       `}</style>
 
       <div className="min-h-screen flex flex-col bg-zinc-950 text-white">
-        <SiteNavbar />
+        <DashboardNavbar />
         {/* Header */}
         <div className="flex flex-col items-center py-16 gap-2 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
