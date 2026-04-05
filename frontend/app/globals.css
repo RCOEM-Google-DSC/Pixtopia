@@ -1,400 +1,211 @@
+/* ──────────────────────────────────────────────────────
+Imports
+────────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Racing+Sans+One&family=Roboto:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap');
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* ─── Brandon Grotesque — Thin 100 ─────────────────────── */
+/* ──────────────────────────────────────────────────────
+Brandon Grotesque Fonts
+────────────────────────────────────────────────────── */
+
+/* Thin */
 @font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_thin-BF64a625c9034b9.otf') format('opentype');
-  font-weight: 100;
-  font-style: normal;
-  font-display: swap;
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_thin-BF64a625c9034b9.otf') format('opentype');
+font-weight: 100;
+font-style: normal;
+font-display: swap;
 }
 @font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_thin_italic-BF64a625c918a96.otf') format('opentype');
-  font-weight: 100;
-  font-style: italic;
-  font-display: swap;
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_thin_italic-BF64a625c918a96.otf') format('opentype');
+font-weight: 100;
+font-style: italic;
+font-display: swap;
 }
 
-/* ─── Brandon Grotesque — Light 300 ────────────────────── */
+/* Light */
 @font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_light-BF64a625c93e709.otf') format('opentype');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_light-BF64a625c93e709.otf') format('opentype');
+font-weight: 300;
+font-style: normal;
+font-display: swap;
 }
 @font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_light_italic-BF64a625c93ac64.otf') format('opentype');
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-
-/* ─── Brandon Grotesque — Regular 400 ──────────────────── */
-@font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_regular-BF64a625c9311e1.otf') format('opentype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_regular_italic-BF64a625c94445e.otf') format('opentype');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_light_italic-BF64a625c93ac64.otf') format('opentype');
+font-weight: 300;
+font-style: italic;
+font-display: swap;
 }
 
-/* ─── Brandon Grotesque — Medium 500 ───────────────────── */
+/* Regular */
 @font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_medium-BF64a625c84a521.otf') format('opentype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_regular-BF64a625c9311e1.otf') format('opentype');
+font-weight: 400;
+font-style: normal;
+font-display: swap;
 }
 @font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_medium_italic-BF64a625c928c55.otf') format('opentype');
-  font-weight: 500;
-  font-style: italic;
-  font-display: swap;
-}
-
-/* ─── Brandon Grotesque — Bold 700 ─────────────────────── */
-@font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_bold-BF64a625c9151d5.otf') format('opentype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_bold_italic-BF64a625c93b0ce.otf') format('opentype');
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_regular_italic-BF64a625c94445e.otf') format('opentype');
+font-weight: 400;
+font-style: italic;
+font-display: swap;
 }
 
-/* ─── Brandon Grotesque — Black 900 ────────────────────── */
+/* Medium */
 @font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_black-BF64a625c944b08.otf') format('opentype');
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_medium-BF64a625c84a521.otf') format('opentype');
+font-weight: 500;
+font-style: normal;
+font-display: swap;
 }
 @font-face {
-  font-family: 'Brandon Grotesque';
-  src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_black_italic-BF64a625c93406c.otf') format('opentype');
-  font-weight: 900;
-  font-style: italic;
-  font-display: swap;
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_medium_italic-BF64a625c928c55.otf') format('opentype');
+font-weight: 500;
+font-style: italic;
+font-display: swap;
 }
 
+/* Bold */
+@font-face {
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_bold-BF64a625c9151d5.otf') format('opentype');
+font-weight: 700;
+font-style: normal;
+font-display: swap;
+}
+@font-face {
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_bold_italic-BF64a625c93b0ce.otf') format('opentype');
+font-weight: 700;
+font-style: italic;
+font-display: swap;
+}
+
+/* Black */
+@font-face {
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_black-BF64a625c944b08.otf') format('opentype');
+font-weight: 900;
+font-style: normal;
+font-display: swap;
+}
+@font-face {
+font-family: 'Brandon Grotesque';
+src: url('../lib/fonts/brandon-grotesque-font-family/HvDTrial_Brandon_Grotesque_black_italic-BF64a625c93406c.otf') format('opentype');
+font-weight: 900;
+font-style: italic;
+font-display: swap;
+}
+
+/* ──────────────────────────────────────────────────────
+Theme (Tailwind v4)
+────────────────────────────────────────────────────── */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: 'Brandon Grotesque', var(--font-sans);
-  --font-brandon: 'Brandon Grotesque', sans-serif;
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+/* Fonts */
+--font-sans: 'Brandon Grotesque', sans-serif;
+--font-brandon: 'Brandon Grotesque', sans-serif;
+--font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+--font-pixel: "Silkscreen", cursive;
+
+/* Pixel Colors */
+--color-pixel-bg: #252525;
+--color-pixel-accent: #E8E8C6;
+--color-pixel-muted: #474744;
+--color-pixel-darker: #1a1a1a;
+
+/* Core Theme */
+--color-background: oklch(1 0 0);
+--color-foreground: oklch(0.145 0 0);
+--color-primary: oklch(0.205 0 0);
+--color-secondary: oklch(0.97 0 0);
+--color-muted: oklch(0.97 0 0);
+--color-accent: oklch(0.97 0 0);
+--color-border: oklch(0.922 0 0);
+--color-ring: oklch(0.708 0 0);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.58 0.22 27);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
+/* Dark Mode */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0.00 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+--color-background: oklch(0.145 0 0);
+--color-foreground: oklch(0.985 0 0);
 }
 
+/* ──────────────────────────────────────────────────────
+Base Styles
+────────────────────────────────────────────────────── */
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+
+* {
+  @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Brandon Grotesque', sans-serif;
-  }
+
+body {
+@apply bg-background text-foreground;
+font-family: 'Brandon Grotesque', sans-serif;
 }
 
-/* ─── Racing / Login 3D Animation Styles ─────────────────────── */
+/* Pixel Theme (opt-in) */
+.pixel-theme {
+@apply bg-pixel-bg text-pixel-accent font-inter antialiased;
+}
+}
 
+/* ──────────────────────────────────────────────────────
+Pixel UI Components
+────────────────────────────────────────────────────── */
+.pixel-border {
+border: 2px solid var(--color-pixel-accent);
+}
+
+.pixel-card {
+@apply bg-pixel-darker border border-pixel-muted rounded-xl overflow-hidden;
+}
+
+.pixel-button {
+@apply px-6 py-2 border border-pixel-accent text-pixel-accent font-pixel text-xs hover:bg-pixel-accent hover:text-pixel-bg transition-colors duration-200;
+}
+
+.pixel-button-filled {
+@apply px-6 py-2 bg-pixel-accent text-pixel-bg font-pixel text-xs hover:opacity-90 transition-opacity duration-200;
+}
+
+/* ──────────────────────────────────────────────────────
+Racing / Animation Styles (unchanged)
+────────────────────────────────────────────────────── */
 .racing-font {
-  font-family: 'Racing Sans One', cursive;
+font-family: 'Racing Sans One', cursive;
 }
 
 .btn-race {
-  background: linear-gradient(90deg, #e11d48 0%, #f59e0b 100%);
-  box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
+background: linear-gradient(90deg, #e11d48 0%, #f59e0b 100%);
+box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
 }
 
-/* Speed lines */
 .road-line {
-  position: absolute;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  width: 300px;
-  border-radius: 100px;
-  z-index: 5;
-  opacity: 0;
-  animation: speedMove linear infinite;
+position: absolute;
+height: 3px;
+background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+width: 300px;
+border-radius: 100px;
+animation: speedMove linear infinite;
 }
 
 @keyframes speedMove {
-  0%   { transform: translateX(120vw);  opacity: 0; }
-  50%  { opacity: 1; }
-  100% { transform: translateX(-120vw); opacity: 0; }
+0% { transform: translateX(120vw); opacity: 0; }
+50% { opacity: 1; }
+100% { transform: translateX(-120vw); opacity: 0; }
 }
 
-/* Login card */
-.login-card {
-  background: #0f0f0f;
-  border: 1px solid #333;
-  border-top: 4px solid #e11d48;
-  padding: 2.5rem;
-  border-radius: 0.75rem;
-  width: 90%;
-  max-width: 420px;
-  box-shadow: 0 20px 50px rgba(225, 29, 72, 0.3);
-}
-
-.login-title-number {
-  font-size: 3rem;
-  text-align: center;
-  margin-bottom: 0.25rem;
-  letter-spacing: -0.05em;
-  font-style: italic;
-  color: #a30606;
-}
-
-.login-title-text {
-  font-size: 1.875rem;
-  text-align: center;
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.05em;
-  text-transform: uppercase;
-  color: #fff;
-}
-
-.login-subtitle {
-  color: #6b7280;
-  text-align: center;
-  margin-bottom: 2rem;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.3em;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.login-label {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-left: 0.25rem;
-}
-
-.login-input {
-  width: 100%;
-  background: #18181b;
-  border: 1px solid #27272a;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  color: #fff;
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.login-input:focus {
-  border-color: #e11d48;
-  box-shadow: 0 0 0 1px #e11d48;
-}
-
-.login-input::placeholder {
-  color: #52525b;
-}
-
-.login-button {
-  width: 100%;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  font-weight: 700;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-
-.login-button:hover {
-  transform: scale(1.02);
-}
-
-.login-button:active {
-  transform: scale(0.98);
-}
-
-.login-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.login-error {
-  padding: 0.75rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  color: #f87171;
-  text-align: center;
-}
-
-.login-links {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 10px;
-  color: #6b7280;
-  padding: 0 0.25rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: -0.05em;
-}
-
-.login-link {
-  text-decoration: none;
-  color: inherit;
-  transition: color 0.2s;
-}
-
-.login-link--red:hover {
-  color: #e11d48;
-}
-
-.login-link--amber:hover {
-  color: #f59e0b;
-}

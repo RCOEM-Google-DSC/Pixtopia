@@ -34,8 +34,8 @@ const SiteNavbar = () => {
     }
     // Home page (or any other page)
     return [
-      { label: "DASHBOARD", href: "/dashboard" },
-      { label: "LEADERBOARD", href: "/leaderboard" },
+      { label: "HOME", href: "/" },
+      { label: "GALLERY", href: "/gallery" },
     ];
   }, [pathname]);
 
@@ -53,22 +53,7 @@ const SiteNavbar = () => {
             </Link>
           ))}
 
-          {/* Login / Logout */}
-          {user ? (
-            <button
-              onClick={handleLogout}
-              className="text-[13px] font-medium tracking-[0.2em] text-zinc-400 hover:text-white transition-colors duration-300 py-4 cursor-pointer bg-transparent border-none"
-            >
-              LOGOUT
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              className="text-[13px] font-medium tracking-[0.2em] text-zinc-400 hover:text-white transition-colors duration-300 py-4"
-            >
-              LOGIN
-            </Link>
-          )}
+         
         </div>
       </div>
     </nav>
