@@ -113,7 +113,6 @@ export default function App() {
                 />
                 <div className="absolute inset-x-0 bottom-0 p-3 bg-linear-to-t from-black/90 to-transparent">
                   <p className="text-sm text-white tracking-wide">
-                    {art.title}
                   </p>
                 </div>
               </article>
